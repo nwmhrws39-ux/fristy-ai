@@ -188,3 +188,11 @@ async def test_history_includes_previous_actions(svc):
         pass
     hist = ai.seen[-1]["messages"]
     assert any("[Actions executed in this turn: set_volume -> ok" in m.content for m in hist)
+
+
+async def test_agent_report_lists_unexecuted_steps(svc, approve_all):
+    plan = {"summary": "two things", "steps": [
+        {"action": "system_info", "args": {}}, {"action": "set_volume", "args": {"level": 30}}]}
+    ScriptedAI(svc, [{"text": json.dumps(plan)}, {"calls": [("system_info", {})]}, {"text": "Finished."}])
+    _, done, _ = await run_to_done(svc, "check the system and set volume to 30", mode="agent")
+    assert "Not executed: Set volume to 30%" in done["text"]

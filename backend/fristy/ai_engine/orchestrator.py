@@ -415,15 +415,21 @@ class Orchestrator:
         self._publish("run.status", run, state="executing")
         summary = await self._tool_loop(run, messages, ctx, max_calls=min(st.max_steps + st.max_recovery_attempts, 25),
                                         deadline=deadline, max_failures=st.max_recovery_attempts)
-        return self._report(run, summary, invalid)
+        return self._report(run, summary, invalid, valid)
 
     @staticmethod
-    def _report(run: RunState, model_summary: str, invalid: list[dict]) -> str:
+    def _report(run: RunState, model_summary: str, invalid: list[dict], planned: list[dict] | None = None) -> str:
         lines = []
         for a in run.actions:
             icon = "✅" if a["ok"] and a["verified"] is not False else ("⚠️" if a["ok"] else "❌")
             note = "" if a["verified"] or not a["ok"] else " (not verified)"
             lines.append(f"{icon} {a['message']}{note}")
+        executed = [a["name"] for a in run.actions]
+        for s in planned or []:
+            if s["action"] in executed:
+                executed.remove(s["action"])
+            else:
+                lines.append(f"⏭ Not executed: {s.get('summary') or s['action']}")
         for s in invalid:
             lines.append(f"⛔ Skipped {s['action']}: {s['error']}")
         report = "\n".join(lines) if lines else "No actions were executed."
