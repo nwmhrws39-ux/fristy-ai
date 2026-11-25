@@ -4,6 +4,7 @@ from __future__ import annotations
 import time
 
 from ..config import RuntimeConfig
+from ..ai_engine.installer import ModelInstaller
 from ..ai_engine.manager import AIManager
 from ..ai_engine.orchestrator import Orchestrator
 from ..automations.engine import AutomationEngine
@@ -57,6 +58,7 @@ def build_services(config: RuntimeConfig, platform=None, use_keyring: bool = Tru
         input=InputController(platform, settings, stop, uia if uia.available else None),
     )
     svc.ai = AIManager(settings, secrets, bus)
+    svc.models = ModelInstaller(svc.ai, settings, bus, audit)
     svc.conversations = ConversationStore(db)
     svc.orchestrator = Orchestrator(svc)
     svc.automations = AutomationEngine(db, engine, confirmations, platform, bus, audit, stop)

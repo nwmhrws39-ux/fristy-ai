@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Bot, Cloud, Cpu, FolderPlus, KeyRound, Keyboard, Lock, Mic, Palette, Plug, RefreshCw, Shield, Smartphone, Trash2, Volume2, X, Folder } from "lucide-react";
 import { ReactNode, useEffect, useState } from "react";
+import LocalModels from "../components/LocalModels";
 import { Card, Field, Select, Spinner, Toggle } from "../components/ui";
 import { api } from "../lib/api";
 import { bridge } from "../lib/bridge";
@@ -63,13 +64,14 @@ function AITab({ s }: { s: any }) {
             <button key={p.id} onClick={() => void saveSettings({ ai: { provider: p.id, model: "" } }, true).then(() => refreshModels())}
               className={`rounded-xl border px-3 py-2.5 text-start text-sm transition ${p.id === provider ? "border-accent/60 bg-accent/15 text-white shadow-glow" : "border-white/10 text-zinc-400 hover:border-white/20"}`}>
               <div className="flex items-center gap-1.5 font-medium">{p.cloud ? <Cloud size={13} /> : <Cpu size={13} />}{p.label}</div>
-              <div className={`mt-0.5 truncate text-[11px] ${p.error ? "text-red-300/80" : "text-zinc-500"}`}>{p.error ? "unavailable" : `${p.models?.length || 0} models`}</div>
+              <div className={`mt-0.5 truncate text-[11px] ${p.error ? "text-red-300/80" : "text-zinc-500"}`}>{p.error ? t("set.unavailable") : t("set.n_models", { n: p.models?.length || 0 })}</div>
             </button>
           ))}
         </div>
         {cloud && <p className="mt-3 flex items-center gap-2 rounded-lg border border-sky-400/30 bg-sky-400/10 p-2 text-xs text-sky-200"><Cloud size={13} />{t("set.cloud_note")}</p>}
         {prov?.error && <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-200 selectable">{prov.error}</p>}
       </Card>
+      {provider === "ollama" && <Card title={t("models.title")} icon={<Cpu size={13} />}><LocalModels /></Card>}
       <Card title={t("set.model")} actions={<button className="btn-ghost h-7 px-2 text-xs" onClick={async () => { setRefreshing(true); await refreshModels(); setRefreshing(false); }}>{refreshing ? <Spinner className="h-3 w-3" /> : <RefreshCw size={12} />}{t("set.refresh")}</button>}>
         <div className="grid gap-3 md:grid-cols-2">
           <Field label={t("set.model")} hint={provider === "ollama" && !modelOpts.length ? "No local models. Install one: ollama pull llama3.1  (or qwen2.5, gemma3 for vision)" : undefined}>

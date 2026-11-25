@@ -3,6 +3,7 @@ import { ArrowUp, Bot, Copy, Mic, MonitorUp, Pause, Play, Plus, Search, Square, 
 import { KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import ActionCard from "../components/ActionCard";
 import Markdown from "../components/Markdown";
+import { NoModelBanner } from "../components/LocalModels";
 import Orb from "../components/Orb";
 import Waveform from "../components/Waveform";
 import { askAboutScreen, deleteConversation, newChat, openConversation, pushToTalk, runOp, sendMessage } from "../lib/controller";
@@ -213,6 +214,7 @@ export default function ChatPage() {
               <div className="mt-2 h-10">{(listening || speaking) && <Waveform />}</div>
               <motion.h1 initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="text-2xl font-semibold text-white">{t("chat.empty.title")}</motion.h1>
               <p className="mt-1.5 text-sm text-zinc-400">{t(`orb.${orb}` as any)} · {t("chat.empty.sub")}</p>
+              <NoModelBanner />
               <div className="mt-6 grid w-full max-w-2xl grid-cols-1 gap-2 sm:grid-cols-2">
                 {examples.map((ex) => (
                   <button key={ex} onClick={() => void sendMessage(ex, { mode: /,|and| ו/.test(ex) ? "agent" : "chat" })}

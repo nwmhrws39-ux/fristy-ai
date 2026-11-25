@@ -21,6 +21,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODEL = "fristy-mock:latest"
+INSTALLED: list[str] = [MODEL]
 
 
 def plan_for(text: str) -> dict:
@@ -88,13 +89,40 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/tags":
-            return self._json({"models": [{"name": MODEL, "size": 1_000_000_000}]})
+            return self._json({"models": [{"name": m, "size": 1_000_000_000} for m in INSTALLED]})
+        if self.path == "/api/version":
+            return self._json({"version": "0.9.0-mock"})
         self._json({"error": "not found"}, 404)
+
+    def do_DELETE(self):
+        self.do_POST()
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         if self.path == "/api/show":
-            return self._json({"capabilities": ["completion", "tools"]})
+            vision = "gemma3" in body.get("model", "") or "vl" in body.get("model", "")
+            return self._json({"capabilities": ["completion", "vision"] if vision else ["completion", "tools"]})
+        if self.path == "/api/pull":
+            # Simulated download: ~8 s, 2 GB "layer", like a real Ollama pull stream.
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ndjson")
+            self.end_headers()
+            total = 2_000_000_000
+            self.wfile.write(b'{"status":"pulling manifest"}\n')
+            for i in range(41):
+                ev = {"status": "pulling 6a0746a1ec1a", "digest": "sha256:6a07", "total": total, "completed": total * i // 40}
+                self.wfile.write((json.dumps(ev) + "\n").encode())
+                self.wfile.flush()
+                time.sleep(0.2)
+            for st in ("verifying sha256 digest", "writing manifest", "success"):
+                self.wfile.write((json.dumps({"status": st}) + "\n").encode())
+            if body.get("model") not in INSTALLED:
+                INSTALLED.append(body.get("model"))
+            return
+        if self.path == "/api/delete":
+            if body.get("model") in INSTALLED:
+                INSTALLED.remove(body.get("model"))
+            return self._json({})
         if self.path != "/api/chat":
             return self._json({"error": "not found"}, 404)
         text, calls = respond(body)
@@ -114,6 +142,9 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=11434)
+    ap.add_argument("--empty", action="store_true", help="start with no installed models")
     a = ap.parse_args()
+    if a.empty:
+        INSTALLED.clear()
     print(f"mock ollama on 127.0.0.1:{a.port}")
     ThreadingHTTPServer(("127.0.0.1", a.port), Handler).serve_forever()

@@ -28,6 +28,7 @@ class Services:
     screen: Any
     input: Any
     ai: Any = None
+    models: Any = None
     conversations: Any = None
     orchestrator: Any = None
     automations: Any = None

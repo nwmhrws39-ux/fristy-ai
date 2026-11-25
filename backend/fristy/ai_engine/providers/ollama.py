@@ -108,3 +108,44 @@ class OllamaProvider(Provider):
                             return
         except httpx.HTTPError as exc:
             raise connect_error("Ollama", self.base_url, exc) from exc
+
+
+# ---------------------------------------------------------------- model management
+async def ollama_version(base_url: str) -> str | None:
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(3.0), trust_env=False) as client:
+            r = await client.get(f"{base_url.rstrip('/')}/api/version")
+            return r.json().get("version") if r.status_code == 200 else None
+    except (httpx.HTTPError, ValueError):
+        return None
+
+
+async def ollama_pull(base_url: str, model: str) -> AsyncIterator[dict]:
+    """Stream download progress from POST /api/pull (NDJSON)."""
+    timeout = httpx.Timeout(connect=10.0, read=600.0, write=30.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+            async with client.stream("POST", f"{base_url.rstrip('/')}/api/pull",
+                                     json={"model": model, "stream": True}) as resp:
+                await Provider._raise_for(resp, "Ollama")
+                async for line in resp.aiter_lines():
+                    if not line.strip():
+                        continue
+                    try:
+                        ev = json.loads(line)
+                    except ValueError:
+                        continue
+                    if ev.get("error"):
+                        raise ProviderError(f"Ollama: {ev['error']}")
+                    yield ev
+    except httpx.HTTPError as exc:
+        raise connect_error("Ollama", base_url, exc) from exc
+
+
+async def ollama_delete(base_url: str, model: str) -> None:
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0), trust_env=False) as client:
+            r = await client.request("DELETE", f"{base_url.rstrip('/')}/api/delete", json={"model": model})
+            await Provider._raise_for(r, "Ollama")
+    except httpx.HTTPError as exc:
+        raise connect_error("Ollama", base_url, exc) from exc

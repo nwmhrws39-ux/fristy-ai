@@ -75,6 +75,8 @@ export interface AppState {
   latency: { total_ms?: number; first_token_ms?: number } | null;
   shortcutFailures: string[];
   lastInputWasVoice?: boolean;
+  pulls: Record<string, any>;
+  localModels: any | null;
 }
 
 const initial: AppState = {
@@ -82,7 +84,7 @@ const initial: AppState = {
   settings: null, status: null, models: null, conversations: [], conversationId: null, messages: [],
   activeRun: null, orb: "idle", confirmations: [], toasts: [], micEnabled: true, listening: false, micLevel: 0,
   speaking: false, screenActive: false, wakeListening: false, transcribing: false, metrics: null, warnings: [],
-  latency: null, shortcutFailures: [],
+  latency: null, shortcutFailures: [], pulls: {}, localModels: null,
 };
 
 let state: AppState = initial;

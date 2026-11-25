@@ -211,6 +211,28 @@ def create_app(config: RuntimeConfig | None = None, services: Services | None = 
         except ProviderError as exc:
             return {"ok": False, "error": str(exc)}
 
+    @app.get("/api/ai/local-models", dependencies=A)
+    async def local_models():
+        return await svc.models.status()
+
+    @app.post("/api/ai/local-models/pull", dependencies=A)
+    async def pull_model(body: dict[str, str] = Body(...)):
+        return svc.models.start(body.get("model", ""))
+
+    @app.post("/api/ai/local-models/cancel", dependencies=A)
+    async def cancel_pull(body: dict[str, str] = Body(...)):
+        return {"ok": svc.models.cancel(body.get("model", ""))}
+
+    @app.post("/api/ai/local-models/delete", dependencies=A)
+    async def delete_model(body: dict[str, str] = Body(...)):
+        from ..ai_engine.types import ProviderError
+
+        try:
+            await svc.models.delete(body.get("model", ""))
+        except ProviderError as exc:
+            raise HTTPException(400, str(exc))
+        return {"ok": True}
+
     # -------------------------------------------------------------- chat
     @app.post("/api/chat", dependencies=A)
     async def chat(req: ChatRequest):

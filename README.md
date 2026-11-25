@@ -17,7 +17,7 @@ FRISTY AI is a JARVIS-style personal assistant for Windows 10/11. It chats, list
 1. Run **`FRISTY-AI-Setup-0.1.0-x64.exe`** (per-user install, no administrator rights needed).
    The installer is **not code-signed**, so Windows SmartScreen will warn: click *More info → Run anyway*.
 2. Choose an AI provider in **Settings → AI**:
-   - **Local (private, free):** install [Ollama](https://ollama.com/download), then in a terminal run `ollama pull qwen2.5:7b` (good tool use) or `ollama pull llama3.1`. For screen understanding add a vision model, e.g. `ollama pull gemma3`.
+   - **Local (private, free):** install [Ollama](https://ollama.com/download). FRISTY then shows **“Install <recommended model>”** on the main screen — one click downloads a model chosen for your PC's RAM (Qwen 2.5 7B for 16 GB+, Qwen 2.5 3B for 8 GB, 1.5B below that) with a progress bar, and selects it automatically. *Settings → AI → Local AI models* lists more models (incl. vision models for screen questions), lets you switch, delete, or install any Ollama model by name.
    - **Cloud:** paste an OpenAI / Anthropic / Gemini API key (stored in Windows Credential Manager, never in plain text).
 3. Open **Settings → Permissions** and enable only what you want FRISTY to do. Add folders in **Settings → Files** to allow file actions.
 4. Optional: **Settings → Voice**. The first voice command downloads the Whisper speech model (~460 MB for `small`) from huggingface.co once.

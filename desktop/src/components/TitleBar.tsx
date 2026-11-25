@@ -3,6 +3,7 @@ import { bridge } from "../lib/bridge";
 import { emergencyStop, setMicEnabled } from "../lib/controller";
 import { useT } from "../lib/i18n";
 import { useStore } from "../lib/store";
+import { PullingIndicator } from "./LocalModels";
 
 export default function TitleBar() {
   const t = useT();
@@ -27,6 +28,7 @@ export default function TitleBar() {
         {screenActive && (
           <span className="chip border-amber-400/40 bg-amber-400/10 text-amber-200"><ScanEye size={12} className="animate-blink" />{t("screen.active")}</span>
         )}
+        <PullingIndicator />
         {wake && <span className="chip border-cyan-400/30 text-cyan-200"><span className="h-1.5 w-1.5 animate-blink rounded-full bg-cyan-300" />{t("wake.on")}</span>}
         {status && (
           <span title={cloud ? t("cloud.warn", { provider }) : undefined}

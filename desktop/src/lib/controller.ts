@@ -59,6 +59,7 @@ async function onBackendReady() {
     applyTheme(settings);
     await refreshStatus();
     void refreshModels(false);
+    void refreshLocalModels();
     window.clearInterval(statusTimer);
     statusTimer = window.setInterval(() => void refreshStatus(), 10000);
     syncWakeListener();
@@ -100,6 +101,39 @@ function mergeConfirmations(pending: any[]) {
 export async function refreshModels(refresh = true) {
   try {
     setState({ models: await api(`/api/ai/models${refresh ? "?refresh=1" : ""}`) });
+  } catch (e) {
+    toast((e as Error).message, "error");
+  }
+}
+
+export async function refreshLocalModels() {
+  try {
+    const localModels = await api("/api/ai/local-models");
+    const pulls: Record<string, any> = {};
+    for (const j of localModels.jobs || []) pulls[j.model] = j;
+    setState((s) => ({ localModels, pulls: { ...pulls, ...Object.fromEntries(Object.entries(s.pulls).filter(([, j]: any) => j.status === "downloading")) } }));
+  } catch {
+    /* backend not ready */
+  }
+}
+
+export async function installModel(model: string) {
+  try {
+    const job = await api("/api/ai/local-models/pull", { body: { model } });
+    setState((s) => ({ pulls: { ...s.pulls, [model]: job } }));
+  } catch (e) {
+    toast((e as Error).message, "error", 7000);
+  }
+}
+
+export async function cancelModel(model: string) {
+  await api("/api/ai/local-models/cancel", { body: { model } }).catch(() => {});
+}
+
+export async function deleteModel(model: string) {
+  try {
+    await api("/api/ai/local-models/delete", { body: { model } });
+    await Promise.all([refreshLocalModels(), refreshModels(false), api("/api/settings").then((settings) => setState({ settings }))]);
   } catch (e) {
     toast((e as Error).message, "error");
   }
@@ -214,7 +248,20 @@ function handleEvent(ev: BackendEvent) {
       toast(`📱 ${ev.device}`, "success");
       break;
     case "settings.changed":
+      void api("/api/settings").then((settings) => { setState({ settings }); applyTheme(settings); }).catch(() => {});
       break;
+    case "ai.pull": {
+      setState((st) => ({ pulls: { ...st.pulls, [ev.model]: ev } }));
+      if (ev.status === "done") {
+        toast(`✓ ${ev.model}`, "success");
+        void refreshModels(false);
+        void refreshLocalModels();
+        void refreshStatus();
+      } else if (ev.status === "error") {
+        toast(`${ev.model}: ${ev.error}`, "error", 8000);
+      }
+      break;
+    }
   }
 }
 
