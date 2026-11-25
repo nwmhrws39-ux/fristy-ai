@@ -6,6 +6,7 @@ compound or ambiguous goes to the AI model instead.
 from __future__ import annotations
 
 import re
+from urllib.parse import quote_plus
 from typing import Optional
 
 _NUM = r"(\d{1,3})\s*(?:%|percent|אחוז(?:ים)?)?"
@@ -32,6 +33,47 @@ _P = [
     (re.compile(r"^(?:פתח|תפתח|הפעל|תפעיל)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "open"),
 ]
 
+
+_P_EXTRA = [
+    (re.compile(r"^(?:please\s+)?(?:turn\s+(?:the\s+)?volume\s+up|volume\s+up|louder|make\s+it\s+louder)(?:\s+by\s+(\d{1,3}))?(?:\s*%)?$", re.I), "vol_up"),
+    (re.compile(r"^(?:תגביר|הגבר|תעלה|העלה)\s*(?:את\s+)?(?:ה)?(?:ווליום|קול|עוצמה|סאונד)?(?:\s+ב-?\s*(\d{1,3})\s*%?)?$"), "vol_up"),
+    (re.compile(r"^(?:please\s+)?(?:turn\s+(?:the\s+)?volume\s+down|volume\s+down|quieter|make\s+it\s+quieter)(?:\s+by\s+(\d{1,3}))?(?:\s*%)?$", re.I), "vol_down"),
+    (re.compile(r"^(?:תנמיך|הנמך|תחליש|החלש|תוריד|הורד)\s*(?:את\s+)?(?:ה)?(?:ווליום|קול|עוצמה|סאונד)?(?:\s+ב-?\s*(\d{1,3})\s*%?)?$"), "vol_down"),
+    (re.compile(r"^(?:please\s+)?close\s+([\w .+'\-]{2,40})$", re.I), "close"),
+    (re.compile(r"^(?:סגור|תסגור)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "close"),
+    (re.compile(r"^(?:please\s+)?(?:switch|go)\s+to\s+([\w .+'\-]{2,40})$", re.I), "switch"),
+    (re.compile(r"^(?:עבור|תעבור)\s+ל-?\s*([֐-׿\w .+'\-]{2,40})$"), "switch"),
+    (re.compile(r"^(?:please\s+)?minimi[sz]e\s+([\w .+'\-]{2,40})$", re.I), "minimize"),
+    (re.compile(r"^(?:מזער|תמזער)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "minimize"),
+    (re.compile(r"^(?:please\s+)?maximi[sz]e\s+([\w .+'\-]{2,40})$", re.I), "maximize"),
+    (re.compile(r"^(?:הגדל|תגדיל)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "maximize"),
+    (re.compile(r"^(?:search\s+(?:google\s+)?for|google)\s+(.{2,80})$", re.I), "google"),
+    (re.compile(r"^(?:חפש|תחפש)\s+(?:ב)?גוגל\s+(.{2,80})$"), "google"),
+    (re.compile(r"^(?:search\s+youtube\s+for|youtube)\s+(.{2,80})$", re.I), "youtube"),
+    (re.compile(r"^(?:חפש|תחפש)\s+(?:ב)?יוטיוב\s+(.{2,80})$"), "youtube"),
+    (re.compile(r"^(?:system\s+info(?:rmation)?|how\s+is\s+my\s+(?:pc|computer)\s+doing|pc\s+status)$", re.I), "sysinfo"),
+    (re.compile(r"^(?:מה\s+)?(?:מצב|נתוני|מפרט)\s+(?:ה)?מחשב$"), "sysinfo"),
+    (re.compile(r"^(?:please\s+)?(?:shut\s*down|turn\s+off)\s+(?:the\s+|my\s+)?(?:computer|pc)$", re.I), "shutdown"),
+    (re.compile(r"^(?:כבה|תכבה)\s+(?:את\s+)?(?:ה)?מחשב$"), "shutdown"),
+    (re.compile(r"^(?:please\s+)?(?:restart|reboot)\s+(?:the\s+|my\s+)?(?:computer|pc)$", re.I), "restart"),
+    (re.compile(r"^(?:הפעל|תפעיל)\s+(?:את\s+)?(?:ה)?מחשב\s+מחדש$|^(?:אתחל|תאתחל)\s+(?:את\s+)?(?:ה)?מחשב$"), "restart"),
+]
+
+PROCESS_NAMES = {
+    "discord": "discord.exe", "chrome": "chrome.exe", "google chrome": "chrome.exe", "microsoft edge": "msedge.exe",
+    "edge": "msedge.exe", "firefox": "firefox.exe", "spotify": "spotify.exe", "steam": "steam.exe",
+    "notepad": "notepad.exe", "calculator": "calculatorapp.exe", "visual studio code": "code.exe",
+    "whatsapp": "whatsapp.exe", "telegram": "telegram.exe", "word": "winword.exe", "excel": "excel.exe",
+    "powerpoint": "powerpnt.exe", "teams": "ms-teams.exe", "zoom": "zoom.exe", "vlc": "vlc.exe", "obs": "obs64.exe",
+}
+
+
+def _clean_target(raw: str) -> str:
+    from ..computer_control.platform.base import APP_ALIASES
+
+    t = re.sub(r"\s+", " ", raw.strip().lower())
+    return APP_ALIASES.get(t, t)
+
 _COMPOUND = re.compile(r"(?i)(\band\b|\bthen\b|,|;| ואז | וגם |\bו(?:ת|ה|ש)[֐-׿]+)")
 _URL_LIKE = re.compile(r"^[\w\-]+(\.[\w\-]+)+(/\S*)?$")
 
@@ -39,7 +81,36 @@ _URL_LIKE = re.compile(r"^[\w\-]+(\.[\w\-]+)+(/\S*)?$")
 def match_quick(text: str) -> Optional[tuple[str, dict]]:
     """Return (action_name, args) for a simple command, else None."""
     t = re.sub(r"[.!?]+$", "", text.strip())
-    if not t or len(t) > 60:
+    if not t or len(t) > 100:
+        return None
+    for pat, intent in _P_EXTRA:
+        m = pat.match(t)
+        if not m:
+            continue
+        arg = (m.group(1) or "").strip() if m.groups() else ""
+        if intent in ("vol_up", "vol_down"):
+            step = int(arg) if arg.isdigit() and 0 < int(arg) <= 100 else 10
+            return "change_volume", {"delta": step if intent == "vol_up" else -step}
+        if intent in ("close", "switch", "minimize", "maximize"):
+            if _COMPOUND.search(" " + arg + " "):
+                return None
+            target = _clean_target(arg)
+            if intent == "close":
+                proc = PROCESS_NAMES.get(target, target.replace(" ", "") + ".exe")
+                return "close_app", {"process": proc}
+            name = {"switch": "switch_window", "minimize": "minimize_window", "maximize": "maximize_window"}[intent]
+            return name, {"query": target}
+        if intent == "google":
+            return "open_website", {"url": "https://www.google.com/search?q=" + quote_plus(arg)}
+        if intent == "youtube":
+            return "open_website", {"url": "https://www.youtube.com/results?search_query=" + quote_plus(arg)}
+        if intent == "sysinfo":
+            return "system_info", {}
+        if intent == "shutdown":
+            return "shutdown_computer", {"delay_seconds": 60}
+        if intent == "restart":
+            return "restart_computer", {"delay_seconds": 60}
+    if len(t) > 60:
         return None
     for pat, intent in _P:
         m = pat.match(t)

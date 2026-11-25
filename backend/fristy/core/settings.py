@@ -55,7 +55,7 @@ class VoiceSettings(BaseModel):
     wake_phrases: list[str] = Field(default_factory=lambda: ["hey fristy", "היי פריסטי"])
     push_to_talk_shortcut: str = "CommandOrControl+Shift+Space"
     stt_engine: Literal["local", "openai"] = "local"
-    whisper_model: Literal["tiny", "base", "small", "medium", "large-v3"] = "small"
+    whisper_model: Literal["tiny", "base", "small", "medium", "large-v3-turbo", "large-v3"] = "small"
     wake_model: Literal["tiny", "base"] = "tiny"
     language: Literal["auto", "he", "en"] = "auto"
     tts_engine: Literal["system", "openai", "off"] = "system"
@@ -143,6 +143,11 @@ class Settings(BaseModel):
     )
     approved_dirs: list[str] = Field(default_factory=list)
     closable_apps: list[str] = Field(default_factory=lambda: ["notepad.exe", "calc.exe"])
+    # strict: medium-risk actions from the AI/agent and every click/typing ask for approval.
+    # relaxed ("full access"): only high-risk actions (delete, power, terminal, closing apps,
+    # cleaning) and actions after reading untrusted content ask.
+    confirmation_level: Literal["strict", "relaxed"] = "strict"
+    full_access: bool = False
     onboarding_done: bool = False
 
     @field_validator("permissions")

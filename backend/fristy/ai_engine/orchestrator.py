@@ -13,6 +13,8 @@ from typing import Any, Optional
 from ..computer_control.base import ActionError, ActionResult, ExecutionContext
 from ..memory.store import extract_learnable
 from ..security.sanitize import redact
+from .hebrew import HEBREW_DIRECTIVE, TOOL_RESULT_SUFFIX_HE, quick_reply_he, reply_language, t as tr
+from .router import relevant_categories
 from .prompts import AGENT_EXEC_PROMPT, AGENT_PLAN_PROMPT, SUMMARY_PROMPT, build_system_prompt
 from .quick import claims_action, match_quick
 from .types import Message, ProviderError, ToolCall, ToolDef, simplify_schema
@@ -32,6 +34,8 @@ class RunState:
     resume: asyncio.Event = field(default_factory=asyncio.Event)
     actions: list[dict[str, Any]] = field(default_factory=list)
     plan: Optional[dict[str, Any]] = None
+    lang: str = "en"
+    text: str = ""
 
     def __post_init__(self) -> None:
         self.resume.set()
@@ -84,7 +88,8 @@ class Orchestrator:
         if not text and not images:
             raise ActionError("Empty message.")
         conv = self.svc.conversations.ensure(conversation_id, text)
-        run = RunState(id=uuid.uuid4().hex, conversation_id=conv["id"], mode=mode, source=source)
+        run = RunState(id=uuid.uuid4().hex, conversation_id=conv["id"], mode=mode, source=source,
+                       lang=reply_language(text, self.svc.settings.current.ui.language), text=text)
         self.runs[run.id] = run
         self.svc.stop.clear()
         task = asyncio.create_task(self._run(run, text, images or []))
@@ -120,12 +125,15 @@ class Orchestrator:
     def _orb(self, state: str) -> None:
         self.svc.bus.publish("orb.state", state=state)
 
-    def tools(self) -> list[ToolDef]:
+    def tools(self, text: str = "") -> list[ToolDef]:
         eng = self.svc.engine
         perms = self.svc.settings.current.permissions
+        cats = relevant_categories(text) if (text and not self.svc.ai.is_cloud()) else None
         out = []
         for spec in self.svc.registry.all():
             if not spec.ai_visible:
+                continue
+            if cats is not None and spec.category not in cats:
                 continue
             if spec.permission and not perms.get(spec.permission):
                 continue
@@ -145,10 +153,11 @@ class Orchestrator:
             note += "\nNote: this backend is not running on Windows, so Windows-only actions are unavailable."
         return note
 
-    def _system(self) -> Message:
+    def _system(self, run: Optional[RunState] = None) -> Message:
         st = self.svc.settings.current
         mem = self.svc.memory.context_block() if st.memory.enabled else ""
-        return Message("system", build_system_prompt(st, mem) + self._disabled_note())
+        lang_note = HEBREW_DIRECTIVE if run and run.lang == "he" else ""
+        return Message("system", build_system_prompt(st, mem) + self._disabled_note() + lang_note)
 
     def _history(self, conversation_id: str) -> list[Message]:
         n = self.svc.settings.current.ai.history_messages
@@ -213,7 +222,7 @@ class Orchestrator:
             run.status = "completed"
         except asyncio.CancelledError:
             run.status = "cancelled"
-            final_text = (final_text + "\n\n" if final_text else "") + "⏹ Stopped."
+            final_text = (final_text + "\n\n" if final_text else "") + tr("stopped", run.lang)
             self._publish("run.cancelled", run)
         except ProviderError as exc:
             run.status = "error"
@@ -260,6 +269,13 @@ class Orchestrator:
                 run.actions.append({"id": "auto", "name": "run_custom_command", "arguments": {"name": auto["name"]},
                                     "ok": res.ok, "message": res.message, "verified": res.verified, "code": res.code})
                 self._publish("chat.tool_result", run, result=run.actions[-1])
+                if run.lang == "he":
+                    results = res.data.get("results") or []
+                    good = sum(1 for r in results if r["ok"])
+                    lines = "\n".join(f"{'✅' if r['ok'] else '❌'} {r['message']}" for r in results)
+                    head = (f"הפקודה '{auto['name']}' הושלמה: {good}/{len(auto['steps'])} שלבים הצליחו." if results
+                            else f"הפקודה '{auto['name']}' לא הורצה: {res.message}")
+                    return head + ("\n" + lines if lines else "")
                 return res.message
         if not self.svc.settings.current.ai.fast_local_commands:
             return None
@@ -286,6 +302,12 @@ class Orchestrator:
                 return None  # not a confident local match: let the AI handle it
         ctx = ExecutionContext(source="voice" if run.source == "voice" else "chat", run_id=run.id)
         res = await self._exec(run, ctx, ToolCall(name=name, arguments=args))
+        if run.lang == "he":
+            return quick_reply_he(name, args, res.ok, res.message, res.data)
+        if name == "system_info" and res.ok:
+            from .hebrew import sysinfo_en
+
+            return sysinfo_en(res.data)
         return res.message
 
     async def _stream_turn(self, run: RunState, messages: list[Message], tools: list[ToolDef] | None):
@@ -301,7 +323,7 @@ class Orchestrator:
 
     async def _tool_loop(self, run: RunState, messages: list[Message], ctx: ExecutionContext, max_calls: int,
                          deadline: Optional[float] = None, max_failures: Optional[int] = None) -> str:
-        tools = self.tools() if max_calls > 0 else None
+        tools = self.tools(run.text) if max_calls > 0 else None
         used, failures = 0, 0
         vision = self.svc.ai.supports_vision()
         text = ""
@@ -328,7 +350,7 @@ class Orchestrator:
                 if not res.ok:
                     failures += 1
                 imgs = [res.image_b64] if res.image_b64 and vision else []
-                content = result_for_model(res)
+                content = result_for_model(res) + (TOOL_RESULT_SUFFIX_HE if run.lang == "he" else "")
                 if res.image_b64 and not vision:
                     content += ' (Screenshot captured but the selected model cannot see images; rely on ui_elements.)'
                 messages.append(Message("tool", content, images=imgs, tool_call_id=call.id, name=call.name))
@@ -343,7 +365,7 @@ class Orchestrator:
                 tools = None
 
     async def _chat(self, run: RunState, text: str, images: list[str]) -> str:
-        messages = [self._system()] + self._history(run.conversation_id)
+        messages = [self._system(run)] + self._history(run.conversation_id)
         # history already contains the user message we just stored; attach images to it
         if images and messages and messages[-1].role == "user":
             messages[-1].images = images
@@ -355,7 +377,7 @@ class Orchestrator:
     async def make_plan(self, text: str) -> dict[str, Any]:
         st = self.svc.settings.current
         catalog = "\n".join(f"- {t.name}: {t.description} args={json.dumps(t.parameters.get('properties', {}))}"
-                            for t in self.tools())
+                            for t in self.tools(text))
         prompt = AGENT_PLAN_PROMPT.format(catalog=catalog or "(no actions enabled)", max_steps=st.agent.max_steps)
         mem = self.svc.memory.context_block() if st.memory.enabled else ""
         msgs = [Message("system", prompt + (f"\nUser preferences:\n{mem}" if mem else "") + self._disabled_note()),
@@ -392,9 +414,9 @@ class Orchestrator:
         valid = [s for s in steps if s["valid"]]
         invalid = [s for s in steps if not s["valid"]]
         if not steps:
-            return plan["summary"] or "No computer actions are needed for that."
+            return plan["summary"] or tr("no_actions_needed", run.lang)
         if not valid:
-            return "I can't perform this plan:\n" + "\n".join(f"• {s['action']}: {s['error']}" for s in invalid)
+            return tr("cannot_plan", run.lang) + "\n" + "\n".join(f"• {s['action']}: {s['error']}" for s in invalid)
         if st.require_plan_approval:
             approved = await self.svc.confirmations.request(
                 action="agent_plan", summary=plan["summary"] or text, risk=max(
@@ -403,13 +425,13 @@ class Orchestrator:
             self.svc.audit.record("agent.plan", source="agent", status="approved" if approved else "denied",
                                   detail={"summary": plan["summary"], "steps": [s["action"] for s in valid]})
             if not approved:
-                return "Plan cancelled - nothing was executed."
+                return tr("plan_cancelled", run.lang)
         ctx = ExecutionContext(source="agent", run_id=run.id, preapproved={s["action"] for s in valid})
         plan_text = "\n".join(f"{i + 1}. {s['action']} {json.dumps(s['args'], ensure_ascii=False)} - {s['description']}"
                               for i, s in enumerate(valid))
         if invalid:
             plan_text += "\nSkipped (not allowed): " + ", ".join(s["action"] for s in invalid)
-        messages = [self._system(), Message("system", AGENT_EXEC_PROMPT.format(plan=plan_text)),
+        messages = [self._system(run), Message("system", AGENT_EXEC_PROMPT.format(plan=plan_text)),
                     Message("user", text, images=images)]
         deadline = time.time() + st.max_duration_seconds
         self._publish("run.status", run, state="executing")
@@ -422,18 +444,18 @@ class Orchestrator:
         lines = []
         for a in run.actions:
             icon = "✅" if a["ok"] and a["verified"] is not False else ("⚠️" if a["ok"] else "❌")
-            note = "" if a["verified"] or not a["ok"] else " (not verified)"
+            note = "" if a["verified"] or not a["ok"] else " " + tr("not_verified", run.lang)
             lines.append(f"{icon} {a['message']}{note}")
         executed = [a["name"] for a in run.actions]
         for s in planned or []:
             if s["action"] in executed:
                 executed.remove(s["action"])
             else:
-                lines.append(f"⏭ Not executed: {s.get('summary') or s['action']}")
+                lines.append(f"⏭ {tr('not_executed', run.lang)}: {s.get('summary') or s['action']}")
         for s in invalid:
-            lines.append(f"⛔ Skipped {s['action']}: {s['error']}")
-        report = "\n".join(lines) if lines else "No actions were executed."
-        return (model_summary.strip() + "\n\n" if model_summary.strip() else "") + "**Execution report**\n" + report
+            lines.append(f"⛔ {tr('skipped', run.lang)} {s['action']}: {s['error']}")
+        report = "\n".join(lines) if lines else tr("no_actions", run.lang)
+        return (model_summary.strip() + "\n\n" if model_summary.strip() else "") + tr("report", run.lang) + "\n" + report
 
     async def _maybe_summarize(self, conversation_id: str) -> None:
         st = self.svc.settings.current.memory

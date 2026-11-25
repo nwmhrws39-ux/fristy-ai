@@ -314,7 +314,7 @@ def build_registry(svc) -> None:
     async def close_app(ctx, args):
         proc = _proc_name(args.process)
         approved = [p.lower() for p in svc.settings.current.closable_apps]
-        if proc not in approved:
+        if proc not in approved and "*" not in approved:
             raise ActionError(f"{proc} is not in the list of applications FRISTY may close. "
                               "Add it in Settings > Permissions > Closable apps.", "not_approved_app")
         if not await _t(plat.process_running, proc):

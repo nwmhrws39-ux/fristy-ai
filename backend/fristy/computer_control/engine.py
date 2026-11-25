@@ -45,9 +45,14 @@ class ActionEngine:
         self.is_windows = sys.platform == "win32"
 
     def needs_confirmation(self, spec, args, ctx: ExecutionContext) -> bool:
-        if spec.confirm == "always":
-            return True
         if spec.confirm_if and spec.confirm_if(args):
+            return True
+        if self.settings.current.confirmation_level == "relaxed":
+            # Full access: only destructive/sensitive actions, or anything after untrusted content.
+            if spec.risk == Risk.HIGH:
+                return True
+            return ctx.untrusted_seen and spec.risk == Risk.MEDIUM
+        if spec.confirm == "always":
             return True
         if spec.confirm == "never":
             return False

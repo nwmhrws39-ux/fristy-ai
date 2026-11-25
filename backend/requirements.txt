@@ -18,4 +18,4 @@ comtypes>=1.4 ; sys_platform == "win32"
 pycaw>=20240316 ; sys_platform == "win32"
 uiautomation>=2.0.20 ; sys_platform == "win32"
 # Local speech recognition (optional but bundled in the installer)
-faster-whisper>=1.0
+faster-whisper>=1.1

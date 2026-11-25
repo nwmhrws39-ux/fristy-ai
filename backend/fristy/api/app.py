@@ -172,6 +172,29 @@ def create_app(config: RuntimeConfig | None = None, services: Services | None = 
         svc.bus.publish("settings.changed")
         return new.model_dump()
 
+    @app.post("/api/full-access", dependencies=A)
+    async def full_access(body: dict[str, bool] = Body(...)):
+        """One-click full computer access (explicit user consent in the UI)."""
+        from pathlib import Path
+
+        from ..core.settings import PERMISSION_NAMES
+
+        enable = bool(body.get("enable"))
+        cur = svc.settings.current
+        if enable:
+            home = str(Path.home())
+            patch = {"permissions": {p: True for p in PERMISSION_NAMES}, "confirmation_level": "relaxed",
+                     "full_access": True, "closable_apps": sorted(set(cur.closable_apps) | {"*"}),
+                     "approved_dirs": cur.approved_dirs if home in cur.approved_dirs else [*cur.approved_dirs, home]}
+        else:
+            patch = {"permissions": {p: p in ("app_launch", "system_control", "network_access") for p in PERMISSION_NAMES},
+                     "confirmation_level": "strict", "full_access": False,
+                     "closable_apps": [a for a in cur.closable_apps if a != "*"]}
+        new = svc.settings.update(patch)
+        svc.audit.record("permissions.full_access", source="ui", status="enabled" if enable else "disabled")
+        svc.bus.publish("settings.changed")
+        return new.model_dump()
+
     @app.get("/api/secrets", dependencies=A)
     async def secrets_status():
         return {"persistent": svc.secrets.persistent, "backend": svc.secrets.backend_name,

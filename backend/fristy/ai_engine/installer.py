@@ -96,7 +96,7 @@ class ModelInstaller:
         """Use the new model if nothing usable is selected yet (only tool-capable 'main' models)."""
         ai = self.settings.current.ai
         curated = next((m for m in CURATED if m["id"] == model), None)
-        if curated and curated["role"] != "main":
+        if curated and (curated["role"] != "main" or not curated["tools"]):
             return
         installed = {m.id for m in self.ai._models.get("ollama", [])}
         if ai.provider == "ollama" and (not ai.model or ai.model not in installed):
