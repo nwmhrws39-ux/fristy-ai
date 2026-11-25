@@ -19,16 +19,13 @@ function run(cmd, cwd = desktop) {
 }
 
 function has(cmd) {
+  // Only used for makensis on non-Windows hosts.
   return spawnSync(isWin ? "where" : "which", [cmd], { stdio: "ignore", shell: isWin }).status === 0;
 }
 
-// 1. Python runtime
+// 1. Python runtime (Node + curl + tar only - no bash needed, also on Windows)
 if (!existsSync(join(root, "vendor", "python", "python.exe"))) {
-  if (!has("bash")) {
-    console.error("bash is required to build the bundled Python runtime (install Git for Windows, which includes Git Bash).");
-    process.exit(1);
-  }
-  run("bash scripts/build_windows_python.sh", root);
+  run(`"${process.execPath}" scripts/build_windows_python.mjs`, root);
 } else {
   console.log("Using existing vendor/python (delete it to rebuild).");
 }

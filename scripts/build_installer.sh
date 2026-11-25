@@ -4,7 +4,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="$(node -p "require('$ROOT/desktop/package.json').version")"
-[ -f "$ROOT/vendor/python/python.exe" ] || bash "$ROOT/scripts/build_windows_python.sh"
+[ -f "$ROOT/vendor/python/python.exe" ] || node "$ROOT/scripts/build_windows_python.mjs"
 cd "$ROOT/desktop"
 npm run build
 rm -rf release/win-unpacked
