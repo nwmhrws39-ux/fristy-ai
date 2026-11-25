@@ -103,13 +103,17 @@ cd backend && FRISTY_PORT=8765 FRISTY_TOKEN=dev ../.venv/bin/python -m fristy.ma
 cd desktop && npm test && npm run typecheck
 ```
 
-### Build the Windows installer
+### Build the Windows installer (EXE)
 
 ```bash
-bash scripts/build_installer.sh
+npm run dist
 ```
 
-This (1) downloads a standalone Windows CPython 3.12 and cross-installs all `win_amd64` wheels with `uv` (`scripts/build_windows_python.sh`), (2) builds the renderer and Electron bundles, (3) packages `win-unpacked` with electron-builder, (4) compiles `installer/fristy.nsi` with NSIS. Output: `desktop/release/FRISTY-AI-Setup-<version>-x64.exe`. Works on Linux (needs `makensis`) or Windows (Git Bash + NSIS).
+Run it from the repo root (or `desktop/`). Output: `desktop/release/FRISTY-AI-Setup-<version>-x64.exe`.
+On **Windows** it needs Git Bash (for the one-time Python runtime build) and uses electron-builder's NSIS directly (the exe gets the FRISTY icon). On **Linux** it needs `makensis` and uses `installer/fristy.nsi` (no Wine). The first run downloads and prepares the bundled Python (~5 min); later runs reuse `vendor/python`.
+GitHub Actions (`.github/workflows/build-windows.yml`) runs the same command on Windows for every `v*` tag and attaches the EXE to a GitHub Release.
+
+`npm run dist` (1) downloads a standalone Windows CPython 3.12 and cross-installs all `win_amd64` wheels with `uv` (`scripts/build_windows_python.sh`), (2) builds the renderer and Electron bundles, (3) packages `win-unpacked` with electron-builder, (4) compiles `installer/fristy.nsi` with NSIS. Output: `desktop/release/FRISTY-AI-Setup-<version>-x64.exe`. `scripts/build_installer.sh` does the same from bash.
 
 ## Project layout
 

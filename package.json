@@ -1,0 +1,11 @@
+{
+  "name": "fristy-ai-workspace",
+  "private": true,
+  "description": "FRISTY AI monorepo helper scripts (the app lives in desktop/ and backend/)",
+  "scripts": {
+    "setup": "npm --prefix desktop install",
+    "dev": "npm --prefix desktop run dev",
+    "test": "npm --prefix desktop test",
+    "dist": "npm --prefix desktop install && npm --prefix desktop run dist"
+  }
+}

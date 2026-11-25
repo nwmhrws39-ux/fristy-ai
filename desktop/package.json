@@ -15,7 +15,7 @@
     "build": "npm run typecheck && npm run build:renderer && npm run build:electron",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
     "test": "vitest run",
-    "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never"
+    "dist": "node scripts/dist.mjs"
   },
   "dependencies": {},
   "devDependencies": {

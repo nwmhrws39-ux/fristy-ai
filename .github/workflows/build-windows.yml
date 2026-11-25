@@ -31,25 +31,14 @@ jobs:
           .venv/Scripts/python.exe -m pip install -q -r backend/requirements-dev.txt
           .venv/Scripts/python.exe -m pytest -q
 
-      - name: Bundled Windows Python runtime
-        run: bash scripts/build_windows_python.sh
-
-      - name: Desktop build + package
+      - name: Frontend tests
         working-directory: desktop
         run: |
           npm ci || npm install
           npm test
-          npm run build
-          npx electron-builder --win dir --x64 --publish never -c.win.signAndEditExecutable=true
 
-      - name: NSIS installer
-        working-directory: installer
-        run: |
-          VERSION=$(node -p "require('../desktop/package.json').version")
-          MAKENSIS="makensis"
-          command -v makensis >/dev/null || MAKENSIS="/c/Program Files (x86)/NSIS/makensis.exe"
-          "$MAKENSIS" -V2 -DVERSION="$VERSION" fristy.nsi
-          ls -la ../desktop/release/*.exe
+      - name: Build installer (npm run dist)
+        run: npm run dist
 
       - uses: actions/upload-artifact@v4
         with:
