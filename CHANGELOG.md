@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.5 — 2026-11-25
+- Same features as 0.2.4 (0.2.4's release was interrupted by a GitHub server error). CI: tests no longer preload speech models; releases retry when left as drafts.
+
 ## 0.2.4 — 2026-11-25
 - App names in natural sentences: filler words are removed (“תסגור את ה אפיק גיימס שרץ לי במסך”, “close the epic games app that's running on my screen”); Hebrew article ה handled; Hebrew→Latin transliteration for matching (“סטים” → Steam).
 - Unknown app names go to the AI (which sees the open apps) instead of a blind “not running”.
