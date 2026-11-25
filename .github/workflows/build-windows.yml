@@ -1,0 +1,65 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Backend venv + tests
+        run: |
+          python -m venv .venv
+          .venv/Scripts/python.exe -m pip install -q -r backend/requirements-dev.txt
+          .venv/Scripts/python.exe -m pytest -q
+
+      - name: Bundled Windows Python runtime
+        run: bash scripts/build_windows_python.sh
+
+      - name: Desktop build + package
+        working-directory: desktop
+        run: |
+          npm ci || npm install
+          npm test
+          npm run build
+          npx electron-builder --win dir --x64 --publish never -c.win.signAndEditExecutable=true
+
+      - name: NSIS installer
+        working-directory: installer
+        run: |
+          VERSION=$(node -p "require('../desktop/package.json').version")
+          MAKENSIS="makensis"
+          command -v makensis >/dev/null || MAKENSIS="/c/Program Files (x86)/NSIS/makensis.exe"
+          "$MAKENSIS" -V2 -DVERSION="$VERSION" fristy.nsi
+          ls -la ../desktop/release/*.exe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FRISTY-AI-Setup
+          path: desktop/release/FRISTY-AI-Setup-*.exe
+          retention-days: 30
+
+      - name: Publish GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: desktop/release/FRISTY-AI-Setup-*.exe
+          generate_release_notes: true
