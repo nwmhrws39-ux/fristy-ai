@@ -134,3 +134,11 @@ tools/               mock Ollama server, icon generator     scripts/  build scri
 The spec's module names map to `backend/fristy/<module>` (Python packages can't contain hyphens): `ai-engine → ai_engine`, `voice-engine → voice_engine`, etc.
 
 See `ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/INTEGRATIONS.md`, `docs/TESTING.md`, `TASKS.md`, `BUGS.md`, `NEXT_STEPS.md`.
+
+## Screenshots
+
+| Assistant | Agent approval | Hebrew (RTL) |
+|---|---|---|
+| ![](docs/screenshots/assistant.png) | ![](docs/screenshots/agent-approval.png) | ![](docs/screenshots/hebrew-rtl.png) |
+| **Dashboard** | **Agent report** | **Compact mode** |
+| ![](docs/screenshots/dashboard.png) | ![](docs/screenshots/agent-result.png) | ![](docs/screenshots/compact.png) |
