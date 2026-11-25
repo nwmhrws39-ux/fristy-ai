@@ -35,10 +35,14 @@ class UrlParams(BaseModel):
     @classmethod
     def _url(cls, v: str) -> str:
         v = v.strip()
-        if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", v):
+        scheme = re.match(r"^([a-zA-Z][a-zA-Z0-9+.-]*):(?!\d+(?:/|$))", v)
+        if scheme and scheme.group(1).lower() not in ("http", "https"):
+            raise ValueError("only http/https URLs are allowed")
+        if not scheme:
             v = "https://" + v
         u = urlparse(v)
-        if u.scheme not in ("http", "https") or not u.netloc or " " in u.netloc:
+        host = u.hostname or ""
+        if u.scheme not in ("http", "https") or not host or " " in u.netloc or not re.match(r"^[\w.\-\[\]:]+$", host):
             raise ValueError("only http/https URLs are allowed")
         return v
 

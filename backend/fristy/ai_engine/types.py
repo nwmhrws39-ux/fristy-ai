@@ -145,10 +145,10 @@ def parse_text_tool_calls(text: str, known: set[str]) -> tuple[str, list[ToolCal
                     args = json.loads(args)
                 except ValueError:
                     args = {}
+            spans.append(m.span())  # strip every action block from visible text
             if name in known and isinstance(args, dict):
                 calls.append(ToolCall(name=name, arguments=args))
-                spans.append(m.span())
-        if calls:
+        if spans:
             break
     cleaned = text
     for start, end in sorted(spans, reverse=True):

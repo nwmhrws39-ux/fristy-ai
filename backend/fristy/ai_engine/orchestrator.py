@@ -274,6 +274,16 @@ class Orchestrator:
             self.svc.engine.validate(name, args)
         except ActionError:
             return None  # let the AI explain (e.g. permission disabled / unsupported)
+        if name == "launch_app":
+            from ..computer_control.platform.base import match_apps
+
+            try:
+                apps = await asyncio.to_thread(self.svc.platform.list_apps)
+            except ActionError:
+                return None
+            matches = match_apps(args["name"], apps, limit=2)
+            if not matches or matches[0][0] < 0.8 or (len(matches) > 1 and matches[1][0] == matches[0][0]):
+                return None  # not a confident local match: let the AI handle it
         ctx = ExecutionContext(source="voice" if run.source == "voice" else "chat", run_id=run.id)
         res = await self._exec(run, ctx, ToolCall(name=name, arguments=args))
         return res.message

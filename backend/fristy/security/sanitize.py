@@ -15,6 +15,7 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
             r"(?i)\b(password|passwd|pwd|passcode|pin|secret|api[_ ]?key|token|סיסמה|סיסמא|קוד סודי)\b\s*(is|=|:|הוא|היא)?\s*\S+"
         ),
     ),
+    ("password_hebrew", re.compile(r"(סיסמ[הא]|קוד\s+סודי|קוד\s+גישה)[^\n]{0,15}?(?:היא|הוא|:|=)\s*\S+")),
 ]
 
 _CARD = re.compile(r"\b(?:\d[ -]?){13,19}\b")
@@ -58,7 +59,7 @@ def redact(text: str) -> str:
         return text
     out = text
     for name, pat in _PATTERNS:
-        if name == "password_assignment":
+        if name in ("password_assignment", "password_hebrew"):
             out = pat.sub(lambda m: m.group(1) + ": [REDACTED]", out)
         else:
             out = pat.sub("[REDACTED]", out)
