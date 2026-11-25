@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.2 — 2026-11-25
+- Installer size fix: the Windows build accidentally packed the whole repository into app.asar (npm --prefix linked the workspace root). Build now refuses oversized app.asar.
+
 ## 0.2.1 — 2026-11-25
 - Much smaller installer (maximum compression).
 - Fix: model download reported “done” before the new model was selected.

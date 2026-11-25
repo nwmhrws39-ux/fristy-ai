@@ -4,7 +4,7 @@
 //  3. Windows: electron-builder NSIS (embeds the exe icon)
 //     Linux/macOS: electron-builder --dir + makensis with installer/fristy.nsi (no Wine needed)
 import { execSync, spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -33,11 +33,23 @@ if (!existsSync(join(root, "vendor", "python", "python.exe"))) {
 // 2. app bundles
 run("npm run build");
 
+function checkAsar() {
+  // The renderer + Electron bundles are ~2 MB. Anything huge means stray files were packed.
+  const asar = join(desktop, "release", "win-unpacked", "resources", "app.asar");
+  const mb = statSync(asar).size / 1e6;
+  console.log(`app.asar: ${mb.toFixed(1)} MB`);
+  if (mb > 50) {
+    console.error("app.asar is unexpectedly large - extra files were packaged (e.g. node_modules links). Aborting.");
+    process.exit(1);
+  }
+}
+
 // 3. installer
 if (isWin) {
   // a) package the app folder (no exe editing: electron-builder's rcedit download
   //    contains symlinks that need Developer Mode/admin to extract)
   run("npx electron-builder --win dir --x64 --publish never");
+  checkAsar();
   // b) embed the FRISTY icon + version info with the rcedit npm package (no admin needed)
   const exe = join(desktop, "release", "win-unpacked", "FRISTY AI.exe");
   console.log("\n> rcedit: setting icon and version info");
@@ -59,6 +71,7 @@ if (isWin) {
     process.exit(1);
   }
   run("npx electron-builder --win dir --x64 --publish never");
+  checkAsar();
   run(`makensis -V2 -DVERSION=${version} fristy.nsi`, join(root, "installer"));
 }
 const exe = join(desktop, "release", `FRISTY-AI-Setup-${version}-x64.exe`);
