@@ -75,9 +75,11 @@ class ModelInstaller:
                 if now - last_emit > 0.4:
                     last_emit = now
                     self.bus.publish("ai.pull", **job)
-            job.update(status="done", percent=100.0, detail="success")
+            job.update(percent=100.0, detail="finalizing")
             await self.ai.discover("ollama")
             self._auto_select(model)
+            # Only report "done" once the model list and selection are up to date.
+            job.update(status="done", detail="success")
             self.audit.record("model.pull", action=model, source="ui", status="success")
         except asyncio.CancelledError:
             job.update(status="cancelled", detail="cancelled")
