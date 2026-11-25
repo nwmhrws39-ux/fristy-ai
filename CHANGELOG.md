@@ -1,11 +1,11 @@
 # Changelog
 
-## 0.2.6 — 2026-11-25
+## 0.2.7 — 2026-11-25
 - Smart app lookup: “close epic games” / “תסגור את ה אפיק גיימס שרץ לי במסך” finds EpicGamesLauncher.exe (name, window title, install folder, Hebrew transliteration); filler words ignored; asks when ambiguous; system processes protected.
 - Tray/background apps close via hidden windows; “סגור בכוח …” / “force close …”.
 - The AI sees the open apps on every request; unknown names go to the AI instead of a blind “not running”.
 - Full access: normal close without approval (force close still asks).
-- Release notes now come from the changelog.
+- Release notes now come from the changelog; releases are published only after the installer upload succeeds (with retries).
 
 ## 0.2.5 — 2026-11-25
 - Same features as 0.2.4 (0.2.4's release was interrupted by a GitHub server error). CI: tests no longer preload speech models; releases retry when left as drafts.
