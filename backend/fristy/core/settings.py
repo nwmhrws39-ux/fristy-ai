@@ -97,7 +97,7 @@ class StartupSettings(BaseModel):
 
 class ShortcutSettings(BaseModel):
     toggle_window: str = "CommandOrControl+Shift+F"
-    emergency_stop: str = "CommandOrControl+Shift+Escape"
+    emergency_stop: str = "CommandOrControl+Shift+F12"
     compact_mode: str = "CommandOrControl+Shift+C"
 
 

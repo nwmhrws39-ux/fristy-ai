@@ -59,9 +59,13 @@ async function freePort(): Promise<number> {
 
 function pythonCommand(): { cmd: string; args: string[]; cwd: string; env: Record<string, string> } {
   if (app.isPackaged) {
-    const py = path.join(process.resourcesPath, "python", "python.exe");
+    const py = process.platform === "win32"
+      ? path.join(process.resourcesPath, "python", "python.exe")
+      : path.join(process.resourcesPath, "python", "bin", "python3");
     const backendDir = path.join(process.resourcesPath, "backend");
-    return { cmd: py, args: ["-I", "-m", "fristy.main"], cwd: backendDir, env: { PYTHONPATH: backendDir, PYTHONNOUSERSITE: "1" } };
+        // -s: ignore the user's site-packages. (Not -I: isolated mode would also ignore PYTHONPATH.)
+    return { cmd: py, args: ["-s", "-m", "fristy.main"], cwd: backendDir,
+             env: { PYTHONPATH: backendDir, PYTHONNOUSERSITE: "1", PYTHONHOME: "", PYTHONSTARTUP: "" } };
   }
   const repo = path.join(__dirname, "..", "..");
   const venvPy = process.platform === "win32" ? path.join(repo, ".venv", "Scripts", "python.exe") : path.join(repo, ".venv", "bin", "python");
@@ -169,7 +173,7 @@ function backendRequest(method: string, p: string, body?: unknown): Promise<any>
 interface Shortcuts { toggle_window: string; emergency_stop: string; compact_mode: string; push_to_talk: string }
 let shortcuts: Shortcuts = {
   toggle_window: "CommandOrControl+Shift+F",
-  emergency_stop: "CommandOrControl+Shift+Escape",
+  emergency_stop: "CommandOrControl+Shift+F12",
   compact_mode: "CommandOrControl+Shift+C",
   push_to_talk: "CommandOrControl+Shift+Space",
 };

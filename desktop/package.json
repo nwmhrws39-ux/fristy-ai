@@ -17,13 +17,7 @@
     "test": "vitest run",
     "dist:win": "npm run build && electron-builder --win nsis --x64 --publish never"
   },
-  "dependencies": {
-    "@fontsource/rubik": "5.1.0",
-    "framer-motion": "11.11.17",
-    "lucide-react": "0.460.0",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@testing-library/dom": "10.4.0",
     "@testing-library/react": "16.0.1",
@@ -40,6 +34,70 @@
     "tailwindcss": "3.4.15",
     "typescript": "5.6.3",
     "vite": "5.4.11",
-    "vitest": "2.1.5"
+    "vitest": "2.1.5",
+    "@fontsource/rubik": "5.1.0",
+    "framer-motion": "11.11.17",
+    "lucide-react": "0.460.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "build": {
+    "appId": "ai.fristy.desktop",
+    "productName": "FRISTY AI",
+    "copyright": "FRISTY",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../vendor/python",
+        "to": "python"
+      },
+      {
+        "from": "../backend/fristy",
+        "to": "backend/fristy",
+        "filter": [
+          "**/*.py"
+        ]
+      },
+      {
+        "from": "build/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "asar": true,
+    "compression": "normal",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FRISTY AI",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "FRISTY-AI-Setup-${version}-x64.${ext}"
+    }
   }
 }
