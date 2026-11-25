@@ -5,7 +5,7 @@ on:
   push:
     tags: ["v*"]
     branches: [main]
-    paths: ["desktop/package.json"]
+    paths: ["desktop/package.json", ".github/workflows/build-windows.yml"]
 
 permissions:
   contents: write
