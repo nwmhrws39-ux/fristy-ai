@@ -1,0 +1,54 @@
+name: Publish release (retry)
+
+# Publishes the installer built by "Build Windows installer" if the release for the
+# current version is missing or incomplete (e.g. GitHub's upload API failed).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 * * * *"
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Publish if needed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('./desktop/package.json').version")
+          TAG="v$VERSION"
+          EXE="FRISTY-AI-Setup-$VERSION-x64.exe"
+          COMPLETE=$(gh release view "$TAG" --json isDraft,assets \
+            --jq '(.isDraft | not) and ([.assets[].name | select(. == "'"$EXE"'")] | length > 0)' 2>/dev/null || echo false)
+          if [ "$COMPLETE" = "true" ]; then echo "$TAG is already published."; exit 0; fi
+
+          mkdir -p out
+          for RUN in $(gh run list --workflow build-windows.yml --branch main --json databaseId,conclusion \
+                        --jq '.[] | select(.conclusion != "cancelled") | .databaseId' --limit 15); do
+            rm -rf out/*
+            if gh run download "$RUN" -n FRISTY-AI-Setup -D out 2>/dev/null && [ -f "out/$EXE" ] && [ -f "out/$EXE.sha256" ]; then
+              echo "Using installer from build run $RUN"; FOUND=1; break
+            fi
+          done
+          [ "${FOUND:-}" = 1 ] || { echo "No build artifact for $VERSION yet."; exit 0; }
+          (cd out && sha256sum -c "$EXE.sha256")
+
+          node scripts/release_notes.mjs "$VERSION"
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --title "FRISTY AI $VERSION" --notes-file release-notes.md
+          fi
+          for i in 1 2 3 4; do
+            if gh release upload "$TAG" "out/$EXE" "out/$EXE.sha256" --clobber; then OK=1; break; fi
+            echo "upload attempt $i failed"; sleep 30
+          done
+          [ "${OK:-}" = 1 ] || { echo "GitHub upload still failing; will retry next hour."; exit 1; }
+          gh release edit "$TAG" --draft=false --latest
+          gh release view "$TAG"
