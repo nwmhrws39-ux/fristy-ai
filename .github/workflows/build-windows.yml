@@ -13,6 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
@@ -51,7 +52,7 @@ jobs:
         run: |
           python -m venv .venv
           .venv/Scripts/python.exe -m pip install -q -r backend/requirements-dev.txt
-          .venv/Scripts/python.exe -m pytest -q
+          .venv/Scripts/python.exe -m pytest -q -p no:cacheprovider --timeout=90 --timeout-method=thread -o faulthandler_timeout=100
 
       - name: Frontend tests
         working-directory: desktop
