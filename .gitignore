@@ -5,7 +5,7 @@ node_modules/
 desktop/dist/
 desktop/dist-electron/
 desktop/release/
-build/
+/build/
 dist/
 .pytest_cache/
 *.db

@@ -35,7 +35,24 @@ run("npm run build");
 
 // 3. installer
 if (isWin) {
-  run("npx electron-builder --win nsis --x64 --publish never -c.win.signAndEditExecutable=true");
+  // a) package the app folder (no exe editing: electron-builder's rcedit download
+  //    contains symlinks that need Developer Mode/admin to extract)
+  run("npx electron-builder --win dir --x64 --publish never");
+  // b) embed the FRISTY icon + version info with the rcedit npm package (no admin needed)
+  const exe = join(desktop, "release", "win-unpacked", "FRISTY AI.exe");
+  console.log("\n> rcedit: setting icon and version info");
+  const { default: rcedit } = await import("rcedit");
+  await rcedit(exe, {
+    icon: join(desktop, "build", "icon.ico"),
+    "file-version": version,
+    "product-version": version,
+    "version-string": {
+      ProductName: "FRISTY AI", FileDescription: "FRISTY AI", CompanyName: "FRISTY",
+      LegalCopyright: "FRISTY", OriginalFilename: "FRISTY AI.exe", InternalName: "FRISTY AI",
+    },
+  });
+  // c) NSIS installer from the prepared folder
+  run("npx electron-builder --prepackaged release/win-unpacked --win nsis --x64 --publish never");
 } else {
   if (!has("makensis")) {
     console.error("makensis is required on this OS (e.g. `sudo apt-get install nsis`).");

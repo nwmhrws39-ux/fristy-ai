@@ -66,7 +66,8 @@ run(uv, ["pip", "install", "--quiet", "--python-platform", "x86_64-pc-windows-ms
   "-r", join(root, "backend", "requirements.txt")]);
 
 // 4. trim
-for (const p of ["Lib/test", "Lib/idlelib", "Lib/tkinter", "tcl", "Lib/ensurepip", "include", "Lib/site-packages/cv2/data"]) {
+for (const p of ["Lib/test", "Lib/idlelib", "Lib/tkinter", "tcl", "Lib/ensurepip", "include", "Lib/site-packages/cv2/data",
+  "Lib/site-packages/bin"]) {
   rmSync(join(out, p), { recursive: true, force: true });
 }
 (function prune(dir) {
