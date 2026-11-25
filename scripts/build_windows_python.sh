@@ -12,7 +12,10 @@ URL="https://github.com/astral-sh/python-build-standalone/releases/download/${PB
 VENDOR="$ROOT/vendor"
 OUT="$VENDOR/python"
 CACHE="$VENDOR/cache"
-HOSTPY="${HOSTPY:-$ROOT/.venv/bin/python}"
+if [ -z "${HOSTPY:-}" ]; then
+  if [ -x "$ROOT/.venv/Scripts/python.exe" ]; then HOSTPY="$ROOT/.venv/Scripts/python.exe"; else HOSTPY="$ROOT/.venv/bin/python"; fi
+fi
+"$HOSTPY" -m pip install -q uv wheel
 mkdir -p "$CACHE"
 
 TARBALL="$CACHE/$(basename "$URL" | sed 's/+/_/')"
