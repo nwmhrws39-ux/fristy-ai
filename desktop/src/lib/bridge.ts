@@ -20,6 +20,8 @@ export interface FristyBridge {
   emergencyStop(): Promise<void>;
   pickFolder(): Promise<string | null>;
   show(): Promise<void>;
+  checkUpdate(): Promise<any>;
+  installUpdate(): Promise<boolean>;
   on(channel: string, fn: (...args: any[]) => void): () => void;
 }
 
@@ -41,6 +43,8 @@ const devBridge: FristyBridge = {
   async openExternal(url) { window.open(url, "_blank", "noopener"); },
   async emergencyStop() {},
   async show() { window.focus(); },
+  async checkUpdate() { return { current: "dev", latest: null, available: false, notes: "", error: "browser" }; },
+  async installUpdate() { return false; },
   async pickFolder() { return window.prompt("Absolute folder path"); },
   on() { return () => {}; },
 };

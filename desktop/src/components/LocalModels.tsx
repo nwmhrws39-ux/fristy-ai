@@ -74,6 +74,7 @@ export default function LocalModels() {
                   </div>
                   <div className="mt-0.5 text-xs text-zinc-400">{lang === "he" ? m.he : m.en}</div>
                   <div className="mt-1.5 flex flex-wrap gap-1 text-[10px]">
+                    <span className="chip" title={t("models.hebrew")}>{t("models.hebrew")} {"★".repeat(m.hebrew || 1)}{"☆".repeat(3 - (m.hebrew || 1))}</span>
                     <span className="chip"><HardDrive size={10} />{m.size_gb} GB</span>
                     <span className="chip">RAM ≥ {m.min_ram_gb} GB</span>
                     {m.tools && <span className="chip"><Wrench size={10} />{t("models.actions")}</span>}
@@ -111,6 +112,7 @@ export default function LocalModels() {
           </div>
         </div>
       )}
+      <p className="mt-3 rounded-lg border border-sky-400/20 bg-sky-400/[0.06] p-2.5 text-xs text-sky-100">{t("models.cloud_tip")}</p>
       <div className="mt-3 flex gap-2">
         <input className="input font-mono text-xs" dir="ltr" placeholder={t("models.custom_ph")} value={custom} onChange={(e) => setCustom(e.target.value)} />
         <button className="btn-outline" disabled={!custom.trim()} onClick={() => { void installModel(custom.trim()); setCustom(""); }}><Download size={14} />{t("models.install")}</button>

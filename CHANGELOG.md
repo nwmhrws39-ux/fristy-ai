@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-11-25
+- **Update button**: checks GitHub Releases, downloads the installer, verifies SHA-256, installs silently and restarts FRISTY. Automatic check at startup.
+- **Full computer access** mode (all permissions + user folder + close any app) with a relaxed approval level; destructive actions (delete, shutdown/restart, terminal, closing apps) still ask.
+- **Better Hebrew**: Hebrew-language directive written in Hebrew, Hebrew replies for fast commands, agent reports and plans in Hebrew, Hebrew quality rating per model (Gemma 3 12B, Aya Expanse 8B added), Whisper large-v3-turbo for Hebrew speech.
+- **More reliable computer control with local models**: only relevant tools are offered per request; many more instant commands in Hebrew/English (volume up/down, close/switch/minimize/maximize, Google/YouTube search, system status, shutdown/restart).
 - One-click local AI models: curated catalog with RAM-based recommendation, download progress (banner, settings, title bar), cancel, delete, auto-select; “Ollama not running” guidance.
 - `npm run dist` builds the Windows EXE on Windows (rcedit icon, no admin) and Linux (NSIS, no Wine).
 

@@ -2,7 +2,7 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 
 type Listener = (...args: any[]) => void;
-const CHANNELS = ["backend:status", "emergency-stop", "push-to-talk", "window:compact", "window:maximized", "shortcuts:status"] as const;
+const CHANNELS = ["update:progress", "backend:status", "emergency-stop", "push-to-talk", "window:compact", "window:maximized", "shortcuts:status"] as const;
 
 contextBridge.exposeInMainWorld("fristy", {
   getConfig: () => ipcRenderer.invoke("config:get"),
@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("fristy", {
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   emergencyStop: () => ipcRenderer.invoke("emergency-stop"),
   show: () => ipcRenderer.invoke("window:show"),
+  checkUpdate: () => ipcRenderer.invoke("update:check"),
+  installUpdate: () => ipcRenderer.invoke("update:install"),
   pickFolder: () => ipcRenderer.invoke("dialog:pickFolder"),
   on: (channel: (typeof CHANNELS)[number], fn: Listener) => {
     if (!CHANNELS.includes(channel)) throw new Error("invalid channel");

@@ -77,6 +77,11 @@ export interface AppState {
   lastInputWasVoice?: boolean;
   pulls: Record<string, any>;
   localModels: any | null;
+  update: any | null;
+  updateOpen: boolean;
+  updateChecking: boolean;
+  updateInstalling: boolean;
+  updateProgress: { received: number; total: number } | null;
 }
 
 const initial: AppState = {
@@ -85,6 +90,7 @@ const initial: AppState = {
   activeRun: null, orb: "idle", confirmations: [], toasts: [], micEnabled: true, listening: false, micLevel: 0,
   speaking: false, screenActive: false, wakeListening: false, transcribing: false, metrics: null, warnings: [],
   latency: null, shortcutFailures: [], pulls: {}, localModels: null,
+  update: null, updateOpen: false, updateChecking: false, updateInstalling: false, updateProgress: null,
 };
 
 let state: AppState = initial;

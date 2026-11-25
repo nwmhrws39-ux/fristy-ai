@@ -129,7 +129,7 @@ function VoiceTab({ s }: { s: any }) {
                 disabled={!status?.voice?.local_stt_available} />
         <div className="grid gap-3 md:grid-cols-3">
           <Field label={t("set.stt")}><Select value={v.stt_engine} onChange={(x) => set({ stt_engine: x })} options={[{ value: "local", label: t("set.stt.local") }, { value: "openai", label: t("set.stt.openai") }]} /></Field>
-          <Field label={t("set.whisper")} hint="small ≈ good Hebrew on CPU · medium/large need more RAM"><Select value={v.whisper_model} onChange={(x) => set({ whisper_model: x })} options={["tiny", "base", "small", "medium", "large-v3"].map((m) => ({ value: m, label: m }))} /></Field>
+          <Field label={t("set.whisper")} hint={t("set.whisper_hint")}><Select value={v.whisper_model} onChange={(x) => set({ whisper_model: x })} options={[{ value: "tiny", label: "tiny" }, { value: "base", label: "base" }, { value: "small", label: "small" }, { value: "medium", label: "medium" }, { value: "large-v3-turbo", label: "large-v3-turbo ★ עברית" }, { value: "large-v3", label: "large-v3" }]} /></Field>
           <Field label={t("set.language")}><Select value={v.language} onChange={(x) => set({ language: x })} options={[{ value: "auto", label: t("set.lang.auto") }, { value: "he", label: "עברית" }, { value: "en", label: "English" }]} /></Field>
         </div>
         <Field label={t("set.mic")}><Select value={v.microphone_id} onChange={(x) => set({ microphone_id: x })} options={[{ value: "", label: t("set.mic.default") }, ...mics.map((m) => ({ value: m.deviceId, label: m.label || m.deviceId.slice(0, 12) }))]} /></Field>
@@ -152,11 +152,45 @@ function VoiceTab({ s }: { s: any }) {
   );
 }
 
+function FullAccessCard({ s }: { s: any }) {
+  const t = useT();
+  const [busy, setBusy] = useState(false);
+  const toggle = async (enable: boolean) => {
+    if (enable && !window.confirm(t("full.confirm"))) return;
+    setBusy(true);
+    try {
+      const settings = await api("/api/full-access", { body: { enable } });
+      setState({ settings });
+      await bridge.applySettings();
+      toast(enable ? t("full.enabled") : t("full.disabled"), enable ? "success" : "info");
+    } catch (e) { toast((e as Error).message, "error"); } finally { setBusy(false); }
+  };
+  return (
+    <div className={`glass p-4 ${s.full_access ? "border-accent/50 shadow-glow" : ""}`}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 font-semibold text-white"><Shield size={16} className="text-accent2" />{t("full.title")}</div>
+          <p className="mt-1 text-sm text-zinc-400">{t("full.sub")}</p>
+          <ul className="mt-2 space-y-0.5 text-xs text-zinc-500">
+            <li>✓ {t("full.p1")}</li><li>✓ {t("full.p2")}</li><li>✓ {t("full.p3")}</li><li>⚠ {t("full.p4")}</li>
+          </ul>
+        </div>
+        <Toggle checked={!!s.full_access} onChange={(v) => void toggle(v)} disabled={busy} />
+      </div>
+    </div>
+  );
+}
+
 function PermissionsTab({ s }: { s: any }) {
   const t = useT();
   const [apps, setApps] = useState((s.closable_apps || []).join(", "));
   return (
     <div className="space-y-4">
+      <FullAccessCard s={s} />
+      <Card title={t("full.level")}>
+        <Select value={s.confirmation_level} onChange={(v) => void saveSettings({ confirmation_level: v })}
+          options={[{ value: "strict", label: t("full.strict") }, { value: "relaxed", label: t("full.relaxed") }]} />
+      </Card>
       <Card title={t("set.permissions")} icon={<Shield size={13} />}>
         <p className="mb-2 text-xs text-zinc-500">{t("set.perm.note")}</p>
         <div className="divide-y divide-white/[0.05]">

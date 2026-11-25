@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { lazy, Suspense, useEffect } from "react";
 import ConfirmDialog from "./components/ConfirmDialog";
+import UpdateDialog from "./components/UpdateDialog";
 import Orb from "./components/Orb";
 import Sidebar from "./components/Sidebar";
 import TitleBar from "./components/TitleBar";
@@ -67,6 +68,7 @@ export default function App() {
         </main>
       </div>
       <ConfirmDialog />
+      <UpdateDialog />
       <Toasts />
       <BackendGate />
     </div>

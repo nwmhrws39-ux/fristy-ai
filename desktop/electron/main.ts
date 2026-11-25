@@ -14,6 +14,7 @@ import * as fs from "node:fs";
 import * as http from "node:http";
 import * as net from "node:net";
 import * as path from "node:path";
+import { checkForUpdate, downloadAndInstall, UpdateInfo } from "./updater";
 
 const isDev = !!process.env.FRISTY_DEV_URL;
 const TOKEN = randomBytes(32).toString("base64url");
@@ -370,6 +371,17 @@ ipcMain.handle("window:show", () => {
   // Used when an approval is requested: the user must be able to see it.
   if (win && !win.isVisible()) showWindow();
   else if (win && !win.isFocused()) win.flashFrame(true);
+});
+let lastUpdate: UpdateInfo | null = null;
+ipcMain.handle("update:check", async () => {
+  lastUpdate = await checkForUpdate();
+  return lastUpdate;
+});
+ipcMain.handle("update:install", async () => {
+  if (!lastUpdate?.available) lastUpdate = await checkForUpdate();
+  if (!lastUpdate?.available) throw new Error("No update available.");
+  await downloadAndInstall(lastUpdate, (p) => win?.webContents.send("update:progress", p), () => { quitting = true; });
+  return true;
 });
 ipcMain.handle("dialog:pickFolder", async () => {
   if (!win) return null;

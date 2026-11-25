@@ -26,6 +26,7 @@ export async function boot() {
   bridge.on("emergency-stop", () => onEmergencyStop());
   bridge.on("push-to-talk", () => void pushToTalk());
   bridge.on("window:compact", (c: boolean) => setState({ compact: c }));
+  bridge.on("update:progress", (p: { received: number; total: number }) => setState({ updateProgress: p }));
   bridge.on("shortcuts:status", (s: { failed: string[] }) => setState({ shortcutFailures: s.failed || [] }));
   events.subscribe(handleEvent);
   events.onStatus = (c) => setState({ wsConnected: c });
@@ -60,6 +61,7 @@ async function onBackendReady() {
     await refreshStatus();
     void refreshModels(false);
     void refreshLocalModels();
+    window.setTimeout(() => void checkForUpdates(true), 4000);
     window.clearInterval(statusTimer);
     statusTimer = window.setInterval(() => void refreshStatus(), 10000);
     syncWakeListener();
@@ -103,6 +105,29 @@ export async function refreshModels(refresh = true) {
     setState({ models: await api(`/api/ai/models${refresh ? "?refresh=1" : ""}`) });
   } catch (e) {
     toast((e as Error).message, "error");
+  }
+}
+
+export async function checkForUpdates(silent: boolean) {
+  if (!silent) setState({ updateOpen: true, updateChecking: true });
+  try {
+    const update = await bridge.checkUpdate();
+    setState({ update });
+    if (silent && update?.available) toast(t("upd.available", { v: update.latest }), "info", 8000);
+  } catch (e) {
+    setState({ update: { error: (e as Error).message } });
+  } finally {
+    setState({ updateChecking: false });
+  }
+}
+
+export async function installUpdate() {
+  setState({ updateInstalling: true, updateProgress: null });
+  try {
+    await bridge.installUpdate();
+  } catch (e) {
+    setState({ updateInstalling: false });
+    toast((e as Error).message.replace(/^Error invoking remote method '[^']+': (Error: )?/, ""), "error", 9000);
   }
 }
 

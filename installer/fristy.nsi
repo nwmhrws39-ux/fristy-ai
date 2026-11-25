@@ -70,6 +70,12 @@ Function .onInit
   ${EndIf}
 FunctionEnd
 
+Function .onInstSuccess
+  ; Silent installs are used by the in-app updater: start FRISTY again afterwards.
+  IfSilent 0 +2
+    Exec '"$INSTDIR\${EXENAME}"'
+FunctionEnd
+
 Section "FRISTY AI" SecMain
   SectionIn RO
   ; Stop a running copy so files can be replaced.

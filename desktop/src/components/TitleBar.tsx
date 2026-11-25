@@ -1,6 +1,6 @@
-import { Minus, Square, X, PictureInPicture2, OctagonX, Cloud, Cpu, ScanEye, Mic, MicOff } from "lucide-react";
+import { Minus, Square, X, PictureInPicture2, OctagonX, Cloud, Cpu, ScanEye, Mic, MicOff, Download } from "lucide-react";
 import { bridge } from "../lib/bridge";
-import { emergencyStop, setMicEnabled } from "../lib/controller";
+import { checkForUpdates, emergencyStop, setMicEnabled } from "../lib/controller";
 import { useT } from "../lib/i18n";
 import { useStore } from "../lib/store";
 import { PullingIndicator } from "./LocalModels";
@@ -13,6 +13,7 @@ export default function TitleBar() {
   const wake = useStore((s) => s.wakeListening);
   const listening = useStore((s) => s.listening);
   const cloud = status?.ai?.cloud;
+  const updateAvailable = useStore((s) => !!s.update?.available);
   const provider = status?.ai?.provider;
 
   return (
@@ -36,6 +37,11 @@ export default function TitleBar() {
             {cloud ? <Cloud size={12} /> : <Cpu size={12} />}{cloud ? `${t("cloud.badge")} · ${provider}` : t("local.badge")}
           </span>
         )}
+        <button onClick={() => void checkForUpdates(false)} title={t("upd.button")}
+                className={`btn h-7 gap-1.5 border px-2.5 text-[11px] font-semibold uppercase tracking-wider ${updateAvailable ? "border-accent/60 bg-accent/20 text-white shadow-glow" : "border-white/10 text-zinc-400 hover:text-white"}`}>
+          <Download size={13} />{t("upd.button")}
+          {updateAvailable && <span className="h-1.5 w-1.5 animate-blink rounded-full bg-accent2" />}
+        </button>
         <button onClick={() => void setMicEnabled(!micEnabled)} title={t("mic.toggle")}
                 className={`btn-ghost h-7 px-2 ${!micEnabled ? "text-red-300" : listening ? "text-cyan-300" : ""}`}>
           {micEnabled ? <Mic size={14} className={listening ? "animate-blink" : ""} /> : <MicOff size={14} />}
