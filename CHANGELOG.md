@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4 — 2026-11-25
+- App names in natural sentences: filler words are removed (“תסגור את ה אפיק גיימס שרץ לי במסך”, “close the epic games app that's running on my screen”); Hebrew article ה handled; Hebrew→Latin transliteration for matching (“סטים” → Steam).
+- Unknown app names go to the AI (which sees the open apps) instead of a blind “not running”.
+- Full access: a normal close no longer asks (the app itself asks about unsaved work); force close still asks.
+
 ## 0.2.3 — 2026-11-25
 - Smart app lookup: “close epic games” / “epicgames” / “אפיק גיימס” finds EpicGamesLauncher.exe (process name, window title, install folder, fuzzy). Asks when ambiguous; never touches Windows system processes.
 - Closes tray/background apps via their hidden windows; “force close …” / “סגור בכוח …” when an app refuses.

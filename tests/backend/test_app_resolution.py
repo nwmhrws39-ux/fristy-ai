@@ -103,3 +103,39 @@ async def test_launch_and_switch_without_spaces(svc):
     svc.platform.windows.append(WindowInfo(78, "Downloads", "explorer.exe", 778))
     res = await svc.engine.execute("switch_window", {"query": "explorer"})
     assert res.ok and ("focus", 78) in svc.platform.calls  # windows may target explorer, closing may not
+
+
+@pytest.mark.parametrize("text", [
+    "תסגור את ה אפיק גיימס שרץ לי בבמסך",
+    "תסגור את האפיק גיימס",
+    "CLOSE EPIC GAMES",
+    "close the epic games app that's running on my screen",
+])
+def test_user_sentences_resolve(text):
+    name, args = match_quick(text)
+    assert name == "close_app"
+    assert find_running(args["process"], PROCS)[0]["name"] == "EpicGamesLauncher.exe"
+
+
+@pytest.mark.parametrize("query,expected", [("סטים", "steam.exe"), ("אפיק", "EpicGamesLauncher.exe")])
+def test_hebrew_transliteration(query, expected):
+    procs = PROCS + [{"name": "steam.exe", "pid": 50, "exe": r"C:\Program Files (x86)\Steam\steam.exe", "title": "Steam"}]
+    assert find_running(query, procs)[0]["name"] == expected
+
+
+async def test_graceful_close_no_approval_in_full_access(svc, approve_all):
+    svc.platform.running.add("EpicGamesLauncher.exe")
+    svc.settings.update({"closable_apps": ["*"], "confirmation_level": "relaxed"})
+    res = await svc.engine.execute("close_app", {"process": "epic games"}, __import__("fristy.computer_control.base", fromlist=["x"]).ExecutionContext(source="chat"))
+    assert res.ok and approve_all.asked == []
+    svc.platform.running.add("Discord.exe")
+    await svc.engine.execute("close_app", {"process": "discord", "force": True})
+    assert [a["action"] for a in approve_all.asked] == ["close_app"]  # force close still asks
+
+
+async def test_unknown_close_target_goes_to_ai(svc):
+    from test_orchestrator import ScriptedAI, run_to_done
+    ai = ScriptedAI(svc, [{"text": "Photoshop isn't open right now."}])
+    _, done, _ = await run_to_done(svc, "close photoshop")
+    assert ai.seen, "unknown app names must be handled by the AI, not answered blindly"
+    assert done["text"] == "Photoshop isn't open right now."

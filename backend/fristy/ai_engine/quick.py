@@ -39,16 +39,16 @@ _P_EXTRA = [
     (re.compile(r"^(?:תגביר|הגבר|תעלה|העלה)\s*(?:את\s+)?(?:ה)?(?:ווליום|קול|עוצמה|סאונד)?(?:\s+ב-?\s*(\d{1,3})\s*%?)?$"), "vol_up"),
     (re.compile(r"^(?:please\s+)?(?:turn\s+(?:the\s+)?volume\s+down|volume\s+down|quieter|make\s+it\s+quieter)(?:\s+by\s+(\d{1,3}))?(?:\s*%)?$", re.I), "vol_down"),
     (re.compile(r"^(?:תנמיך|הנמך|תחליש|החלש|תוריד|הורד)\s*(?:את\s+)?(?:ה)?(?:ווליום|קול|עוצמה|סאונד)?(?:\s+ב-?\s*(\d{1,3})\s*%?)?$"), "vol_down"),
-    (re.compile(r"^(?:please\s+)?force\s+(?:close|quit|kill)\s+([\w .+'\-]{2,40})$", re.I), "force_close"),
-    (re.compile(r"^(?:סגור|תסגור)\s+בכוח\s+(?:את\s+)?(?:ה)?([\u0590-\u05FF\w .+'\-]{2,40})$"), "force_close"),
-    (re.compile(r"^(?:please\s+)?close\s+([\w .+'\-]{2,40})$", re.I), "close"),
-    (re.compile(r"^(?:סגור|תסגור)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "close"),
-    (re.compile(r"^(?:please\s+)?(?:switch|go)\s+to\s+([\w .+'\-]{2,40})$", re.I), "switch"),
-    (re.compile(r"^(?:עבור|תעבור)\s+ל-?\s*([֐-׿\w .+'\-]{2,40})$"), "switch"),
-    (re.compile(r"^(?:please\s+)?minimi[sz]e\s+([\w .+'\-]{2,40})$", re.I), "minimize"),
-    (re.compile(r"^(?:מזער|תמזער)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "minimize"),
-    (re.compile(r"^(?:please\s+)?maximi[sz]e\s+([\w .+'\-]{2,40})$", re.I), "maximize"),
-    (re.compile(r"^(?:הגדל|תגדיל)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "maximize"),
+    (re.compile(r"^(?:please\s+)?force\s+(?:close|quit|kill)\s+([\w .+'\-]{2,80})$", re.I), "force_close"),
+    (re.compile(r"^(?:סגור|תסגור)\s+בכוח\s+(?:את\s+)?(?:ה)?([\u0590-\u05FF\w .+'\-]{2,80})$"), "force_close"),
+    (re.compile(r"^(?:please\s+)?close\s+([\w .+'\-]{2,80})$", re.I), "close"),
+    (re.compile(r"^(?:סגור|תסגור)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,80})$"), "close"),
+    (re.compile(r"^(?:please\s+)?(?:switch|go)\s+to\s+([\w .+'\-]{2,80})$", re.I), "switch"),
+    (re.compile(r"^(?:עבור|תעבור)\s+ל-?\s*([֐-׿\w .+'\-]{2,80})$"), "switch"),
+    (re.compile(r"^(?:please\s+)?minimi[sz]e\s+([\w .+'\-]{2,80})$", re.I), "minimize"),
+    (re.compile(r"^(?:מזער|תמזער)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,80})$"), "minimize"),
+    (re.compile(r"^(?:please\s+)?maximi[sz]e\s+([\w .+'\-]{2,80})$", re.I), "maximize"),
+    (re.compile(r"^(?:הגדל|תגדיל)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,80})$"), "maximize"),
     (re.compile(r"^(?:search\s+(?:google\s+)?for|google)\s+(.{2,80})$", re.I), "google"),
     (re.compile(r"^(?:חפש|תחפש)\s+(?:ב)?גוגל\s+(.{2,80})$"), "google"),
     (re.compile(r"^(?:search\s+youtube\s+for|youtube)\s+(.{2,80})$", re.I), "youtube"),
@@ -71,9 +71,9 @@ PROCESS_NAMES = {
 
 
 def _clean_target(raw: str) -> str:
-    from ..computer_control.platform.base import APP_ALIASES
+    from ..computer_control.platform.base import APP_ALIASES, clean_app_query
 
-    t = re.sub(r"\s+", " ", raw.strip().lower())
+    t = clean_app_query(re.sub(r"\s+", " ", raw.strip().lower()))
     return APP_ALIASES.get(t, t)
 
 _COMPOUND = re.compile(r"(?i)(\band\b|\bthen\b|,|;| ואז | וגם |\bו(?:ת|ה|ש)[֐-׿]+)")

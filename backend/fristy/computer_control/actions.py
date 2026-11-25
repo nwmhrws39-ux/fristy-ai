@@ -345,7 +345,8 @@ def build_registry(svc) -> None:
 
     add("close_app", "Close a running application by the name the user used (FRISTY finds the real process).",
         CloseAppParams, "app_launch", Risk.HIGH, close_app, windows_only=True, category="windows",
-        describe=lambda a: f"Close {a.process}" + (" (force)" if a.force else ""), preview=close_preview)
+        describe=lambda a: f"Close {a.process}" + (" (force)" if a.force else ""), preview=close_preview,
+        relaxed_skip=lambda a: not a.force)  # graceful close: the app itself asks about unsaved work
     add("list_running_apps", "List the applications that are running right now (process + window title).",
         EmptyParams, "system_control", Risk.LOW, running_apps, windows_only=True, category="windows")
 

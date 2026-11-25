@@ -308,6 +308,16 @@ class Orchestrator:
             self.svc.engine.validate(name, args)
         except ActionError:
             return None  # let the AI explain (e.g. permission disabled / unsupported)
+        if name in ("close_app", "switch_window", "minimize_window", "maximize_window"):
+            from ..computer_control.platform.base import find_running
+
+            try:
+                procs = await asyncio.to_thread(self.svc.platform.running_processes)
+            except Exception:
+                return None
+            if not find_running(args.get("process") or args.get("query", ""), procs,
+                                allow_protected=name != "close_app"):
+                return None  # unknown name: let the AI decide using the list of open apps
         if name == "launch_app":
             from ..computer_control.platform.base import match_apps
 

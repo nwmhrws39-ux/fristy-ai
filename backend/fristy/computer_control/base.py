@@ -85,6 +85,8 @@ class ActionSpec:
     # Extra dynamic rule, e.g. "copy with overwrite=True needs confirmation".
     confirm_if: Optional[ConfirmCheck] = None
     describe: Optional[Describer] = None
+    # In relaxed (full access) mode, return True to skip confirmation for these args.
+    relaxed_skip: Optional[ConfirmCheck] = None
     # Extra information shown in the confirmation dialog (e.g. a code diff).
     preview: Optional[Callable[[Any], dict[str, Any]]] = None
     windows_only: bool = False

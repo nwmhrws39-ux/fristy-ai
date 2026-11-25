@@ -49,9 +49,11 @@ class ActionEngine:
             return True
         if self.settings.current.confirmation_level == "relaxed":
             # Full access: only destructive/sensitive actions, or anything after untrusted content.
-            if spec.risk == Risk.HIGH:
+            if ctx.untrusted_seen and spec.risk in (Risk.MEDIUM, Risk.HIGH):
                 return True
-            return ctx.untrusted_seen and spec.risk == Risk.MEDIUM
+            if spec.relaxed_skip and spec.relaxed_skip(args):
+                return False
+            return spec.risk == Risk.HIGH
         if spec.confirm == "always":
             return True
         if spec.confirm == "never":

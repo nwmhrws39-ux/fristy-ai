@@ -87,6 +87,38 @@ APP_ALIASES: dict[str, str] = {
 }
 
 
+_HE2LAT = {"א": "a", "ב": "b", "ג": "g", "ד": "d", "ה": "h", "ו": "o", "ז": "z", "ח": "h", "ט": "t", "י": "i",
+           "כ": "k", "ך": "k", "ל": "l", "מ": "m", "ם": "m", "נ": "n", "ן": "n", "ס": "s", "ע": "a", "פ": "p", "ף": "f",
+           "צ": "ts", "ץ": "ts", "ק": "k", "ר": "r", "ש": "sh", "ת": "t", "'": ""}
+
+
+def transliterate_he(s: str) -> str:
+    """Rough Hebrew -> Latin transliteration ("אפיק גיימס" -> "apik giims") for fuzzy name matching."""
+    out = "".join(_HE2LAT.get(ch, ch) for ch in s)
+    return out.replace("ii", "i").replace("ph", "f")
+
+
+# Words people add around an app name: "close the epic games that's running on my screen".
+_FILLER = re.compile(
+    r"(?i)^(?:the|my|this|that|app|application|program|game|ה|את|של|האפליקציה|התוכנה|המשחק|אפליקציית|תוכנת)\s+|"
+    r"\s+(?:app|application|program|window|game|please|now|for me|that'?s|that is|which is|that'?s (?:running|open)|which is (?:running|open)|"
+    r"(?:running|open)(?: on (?:my|the) (?:screen|pc|computer))?|on (?:my|the) (?:screen|pc|computer)|in the background|"
+    r"בבקשה|עכשיו|שלי|לי|שרץ.*|שפתוח.*|שפתוחה.*|שרצה.*|שעובד.*|במסך|בבמסך|ברקע|במחשב|פתוח|פתוחה)$"
+)
+
+
+def clean_app_query(raw: str) -> str:
+    t = re.sub(r"\s+", " ", (raw or "").strip())
+    for _ in range(6):
+        new = _FILLER.sub("", t).strip()
+        if new == t:
+            break
+        t = new
+    # Hebrew definite article glued to the name: "האפיק גיימס" -> "אפיק גיימס"
+    t = re.sub(r"^ה(?=[\u0590-\u05ff]{3,})", "", t)
+    return t
+
+
 def normalize_name(s: str) -> str:
     s = unicodedata.normalize("NFKC", s or "").lower().strip()
     s = re.sub(r"[™®©]", "", s)
@@ -95,8 +127,10 @@ def normalize_name(s: str) -> str:
 
 
 def match_apps(query: str, apps: list[AppEntry], limit: int = 5, games_only: bool = False) -> list[tuple[float, AppEntry]]:
-    q = normalize_name(query)
+    q = normalize_name(clean_app_query(query))
     q = APP_ALIASES.get(q, q)
+    if re.search(r"[\u0590-\u05ff]", q) and q not in APP_ALIASES.values():
+        q = transliterate_he(q)
     scored: list[tuple[float, AppEntry]] = []
     for app in apps:
         if games_only and not app.is_game:
@@ -343,8 +377,10 @@ def find_running(query: str, processes: list[dict[str, Any]], allow_protected: b
     "epicgames" or "Epic" all find EpicGamesLauncher.exe. Returns groups (one per
     process name) sorted by score: {name, pids, titles, exe, score}.
     """
-    q_raw = normalize_name(query)
+    q_raw = normalize_name(clean_app_query(query))
     q_raw = APP_ALIASES.get(q_raw, q_raw)
+    if re.search(r"[\u0590-\u05ff]", q_raw):
+        q_raw = transliterate_he(q_raw)
     q = _norm(q_raw)
     if not q:
         return []
