@@ -78,6 +78,11 @@ APP_ALIASES: dict[str, str] = {
     "csgo": "counter-strike 2",
     "lol": "league of legends",
     "פורטנייט": "fortnite",
+    "אפיק": "epic games",
+    "אפיק גיימס": "epic games",
+    "epic": "epic games",
+    "epicgames": "epic games",
+    "epic games launcher": "epic games",
     "מיינקראפט": "minecraft",
 }
 
@@ -98,8 +103,16 @@ def match_apps(query: str, apps: list[AppEntry], limit: int = 5, games_only: boo
             continue
         names = [normalize_name(app.name)] + [normalize_name(a) for a in app.aliases]
         best = 0.0
+        nq = re.sub(r"[^a-z0-9\u0590-\u05ff]", "", q)
         for n in names:
             if not n:
+                continue
+            nn = re.sub(r"[^a-z0-9\u0590-\u05ff]", "", n)
+            if nq and nn == nq:
+                best = max(best, 1.0)
+                continue
+            if len(nq) >= 4 and nn.startswith(nq):
+                best = max(best, 0.9)
                 continue
             if n == q:
                 score = 1.0
@@ -173,6 +186,26 @@ class PlatformBackend:
 
     def foreground_window(self) -> Optional[WindowInfo]:
         return None
+
+    def running_processes(self) -> list[dict[str, Any]]:
+        """Running processes with their main window title (if any)."""
+        titles: dict[int, str] = {}
+        try:
+            for w in self.list_windows():
+                titles.setdefault(w.pid, w.title)
+        except ActionError:
+            pass
+        out = []
+        for p in psutil.process_iter(["name", "pid", "exe"]):
+            try:
+                out.append({"name": p.info["name"] or "", "pid": p.info["pid"], "exe": p.info.get("exe") or "",
+                            "title": titles.get(p.info["pid"], "")})
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        return out
+
+    def close_pids(self, pids: list[int], force: bool = False, timeout: float = 8.0) -> int:
+        raise UnsupportedPlatform("Closing applications")
 
     # --- audio / media ------------------------------------------------
     def get_volume(self) -> tuple[int, bool]:
@@ -284,3 +317,66 @@ def _no_window() -> dict[str, Any]:
     if os.name == "nt":
         return {"creationflags": 0x08000000}  # CREATE_NO_WINDOW
     return {}
+
+
+# ------------------------------------------------------------- process lookup
+# Never closed by FRISTY, whatever the request.
+PROTECTED_PROCESSES = {
+    "system", "idle", "registry", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe",
+    "lsass.exe", "svchost.exe", "dwm.exe", "explorer.exe", "fontdrvhost.exe", "sihost.exe", "ctfmon.exe",
+    "taskhostw.exe", "runtimebroker.exe", "searchhost.exe", "startmenuexperiencehost.exe", "shellexperiencehost.exe",
+    "securityhealthservice.exe", "msmpeng.exe", "audiodg.exe", "conhost.exe", "lockapp.exe", "logonui.exe",
+    "fristy ai.exe", "python.exe", "pythonw.exe", "ollama.exe", "ollama app.exe",
+}
+
+
+def _norm(s: str) -> str:
+    s = normalize_name(s)
+    s = re.sub(r"\.exe$", "", s)
+    return re.sub(r"[^a-z0-9֐-׿]", "", s)
+
+
+def find_running(query: str, processes: list[dict[str, Any]], allow_protected: bool = False) -> list[dict[str, Any]]:
+    """Rank running applications for a spoken/written name.
+
+    Matches the process name, window titles and the install folder, so "epic games",
+    "epicgames" or "Epic" all find EpicGamesLauncher.exe. Returns groups (one per
+    process name) sorted by score: {name, pids, titles, exe, score}.
+    """
+    q_raw = normalize_name(query)
+    q_raw = APP_ALIASES.get(q_raw, q_raw)
+    q = _norm(q_raw)
+    if not q:
+        return []
+    groups: dict[str, dict[str, Any]] = {}
+    for p in processes:
+        name = (p.get("name") or "").strip()
+        if not name or (not allow_protected and name.lower() in PROTECTED_PROCESSES):
+            continue
+        n = _norm(name)
+        title = p.get("title") or ""
+        t = _norm(title)
+        exe = p.get("exe") or ""
+        folders = [_norm(part) for part in re.split(r"[\\/]", exe)[:-1] if part and ":" not in part]
+        folders = [f for f in folders if f not in ("programfiles", "programfilesx86", "users", "appdata", "local",
+                                                   "roaming", "programs", "windows", "bin", "app", "")]
+        if n == q:
+            score = 1.0
+        elif len(q) >= 3 and n.startswith(q):
+            score = 0.95
+        elif len(q) >= 4 and (q in n or (len(n) >= 4 and n in q)):
+            score = 0.9
+        elif len(q) >= 3 and t and (q in t or t == q):
+            score = 0.86
+        elif len(q) >= 4 and any(q in f or (len(f) >= 4 and f in q) for f in folders):
+            score = 0.82
+        else:
+            score = difflib.SequenceMatcher(None, q, n).ratio() * 0.8
+        if score < 0.6:
+            continue
+        g = groups.setdefault(name.lower(), {"name": name, "pids": [], "titles": [], "exe": exe, "score": 0.0})
+        g["pids"].append(p.get("pid"))
+        if title and title not in g["titles"]:
+            g["titles"].append(title[:80])
+        g["score"] = max(g["score"], score)
+    return sorted(groups.values(), key=lambda g: (-g["score"], -len(g["titles"])))

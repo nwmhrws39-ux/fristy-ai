@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field, field_validator
 from ..screen_analysis import cv_utils
 from ..security.sanitize import fence_untrusted
 from .base import ActionError, ActionResult, ActionSpec, EmptyParams, ExecutionContext, Risk
-from .platform.base import match_apps
+from .platform.base import find_running, match_apps
 
 CLOUD_PROVIDERS = {"openai", "anthropic", "gemini"}
 
@@ -52,8 +52,10 @@ class WindowParams(BaseModel):
 
 
 class CloseAppParams(BaseModel):
-    process: str = Field(..., min_length=1, max_length=100, description="Process name, e.g. 'discord.exe' or 'Discord'")
-    force: bool = Field(False, description="Terminate if the app does not close gracefully")
+    process: str = Field(..., min_length=1, max_length=100,
+                         description="App name as the user said it, or process name - FRISTY finds the running app "
+                                     "(e.g. 'epic games', 'Discord', 'chrome.exe')")
+    force: bool = Field(False, description="End the app if it does not close gracefully")
 
 
 class VolumeParams(BaseModel):
@@ -258,23 +260,16 @@ def build_registry(svc) -> None:
     # ------------------------------------------------------- windows
     async def find_window(query: str):
         wins = await _t(plat.list_windows)
-        q = query.lower().strip()
-        q_proc = q if q.endswith(".exe") else q + ".exe"
-        scored = []
-        for w in wins:
-            t, p = w.title.lower(), w.process.lower()
-            if p == q_proc or t == q:
-                s = 1.0
-            elif q in t or q in p:
-                s = 0.85
-            else:
-                s = max(difflib.SequenceMatcher(None, q, t).ratio(), difflib.SequenceMatcher(None, q, p).ratio()) * 0.8
-            if s >= 0.5:
-                scored.append((s, w))
-        if not scored:
+        procs = [{"name": w.process, "pid": w.pid, "exe": "", "title": w.title} for w in wins]
+        groups = find_running(query, procs, allow_protected=True)
+        if not groups:
             raise ActionError(f"No open window matches '{query}'.", "not_found")
-        scored.sort(key=lambda x: -x[0])
-        return scored[0][1]
+        pids = set(groups[0]["pids"])
+        candidates = [w for w in wins if w.pid in pids]
+        # Prefer the window whose title matches best, then a non-minimized one.
+        q = query.lower()
+        candidates.sort(key=lambda w: (q not in w.title.lower(), w.minimized))
+        return candidates[0]
 
     async def list_windows(ctx, args):
         wins = await _t(plat.list_windows)
@@ -307,27 +302,52 @@ def build_registry(svc) -> None:
     add("maximize_window", "Maximize a window.", WindowParams, "system_control", Risk.LOW, maximize,
         windows_only=True, category="windows", describe=lambda a: f"Maximize {a.query}")
 
-    def _proc_name(name: str) -> str:
-        n = name.strip().lower()
-        return n if n.endswith(".exe") else n + ".exe"
+    def resolve_running(query: str) -> dict:
+        groups = find_running(query, plat.running_processes())
+        if not groups:
+            raise ActionError(f"No running app matches '{query}'.", "not_running")
+        best = groups[0]
+        if len(groups) > 1 and groups[1]["score"] >= best["score"] - 0.04 and best["score"] < 1.0:
+            names = ", ".join(f"{g['name']} ({g['titles'][0]})" if g["titles"] else g["name"] for g in groups[:4])
+            raise ActionError(f"'{query}' matches several running apps: {names}. Which one?", "ambiguous")
+        return best
 
     async def close_app(ctx, args):
-        proc = _proc_name(args.process)
+        try:
+            target = await _t(resolve_running, args.process)
+        except ActionError as exc:
+            if exc.code == "not_running":
+                return ok(f"{args.process} is not running.", verified=True)
+            raise
+        proc = target["name"].lower()
         approved = [p.lower() for p in svc.settings.current.closable_apps]
         if proc not in approved and "*" not in approved:
-            raise ActionError(f"{proc} is not in the list of applications FRISTY may close. "
-                              "Add it in Settings > Permissions > Closable apps.", "not_approved_app")
-        if not await _t(plat.process_running, proc):
-            return ok(f"{proc} is not running.", verified=True)
-        n = await _t(plat.close_process_windows, proc, args.force)
-        still = await _t(plat.process_running, proc)
-        if still:
-            return ActionResult(False, f"{proc} is still running.", verified=False)
-        return ok(f"Closed {proc} ({n} process(es)).", verified=True)
+            raise ActionError(f"{target['name']} is not in the list of applications FRISTY may close. "
+                              "Enable Full access or add it in Settings > Permissions > Closable apps.", "not_approved_app")
+        n = await _t(plat.close_pids, target["pids"], args.force)
+        if await _t(plat.process_running, proc):
+            return ActionResult(False, f"{target['name']} is still running.", verified=False, code="still_running")
+        friendly = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", re.sub(r"\.exe$", "", target["name"], flags=re.I))
+        return ok(f"Closed {friendly} ({n} process(es)).", verified=True, process=target["name"], app=friendly)
 
-    add("close_app", "Close an approved application (graceful; force optional).", CloseAppParams, "app_launch",
-        Risk.HIGH, close_app, windows_only=True, category="windows",
-        describe=lambda a: f"Close {_proc_name(a.process)}" + (" (force)" if a.force else ""))
+    def close_preview(a):
+        try:
+            t = resolve_running(a.process)
+            return {"will_close": t["name"], "windows": t["titles"][:3], "processes": len(t["pids"])}
+        except ActionError as exc:
+            return {"note": str(exc)}
+
+    async def running_apps(ctx, args):
+        procs = await _t(plat.running_processes)
+        with_windows = sorted({(p["name"], p["title"]) for p in procs if p["title"]})
+        return ok(f"{len(with_windows)} apps with open windows.", verified=True,
+                  apps=[{"process": n, "window": t[:80]} for n, t in with_windows][:60])
+
+    add("close_app", "Close a running application by the name the user used (FRISTY finds the real process).",
+        CloseAppParams, "app_launch", Risk.HIGH, close_app, windows_only=True, category="windows",
+        describe=lambda a: f"Close {a.process}" + (" (force)" if a.force else ""), preview=close_preview)
+    add("list_running_apps", "List the applications that are running right now (process + window title).",
+        EmptyParams, "system_control", Risk.LOW, running_apps, windows_only=True, category="windows")
 
     # --------------------------------------------------- audio/media
     async def get_volume(ctx, args):

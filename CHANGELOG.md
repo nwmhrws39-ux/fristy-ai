@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3 — 2026-11-25
+- Smart app lookup: “close epic games” / “epicgames” / “אפיק גיימס” finds EpicGamesLauncher.exe (process name, window title, install folder, fuzzy). Asks when ambiguous; never touches Windows system processes.
+- Closes tray/background apps via their hidden windows; “force close …” / “סגור בכוח …” when an app refuses.
+- The AI sees the list of open apps on every request and has a new list_running_apps tool; open/switch matching ignores spaces.
+
 ## 0.2.2 — 2026-11-25
 - Installer size fix: the Windows build accidentally packed the whole repository into app.asar (npm --prefix linked the workspace root). Build now refuses oversized app.asar.
 

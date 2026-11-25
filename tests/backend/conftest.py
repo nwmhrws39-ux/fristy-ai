@@ -28,6 +28,8 @@ class FakePlatform(PlatformBackend):
         self.windows = [WindowInfo(1, "Untitled - Notepad", "notepad.exe", 100),
                         WindowInfo(2, "Discord", "Discord.exe", 200)]
         self.running = {"notepad.exe"}
+        self.exe_paths: dict[str, str] = {}
+        self.stubborn: set[str] = set()
         self.secure = False
         self.fg: WindowInfo | None = None
         self.volume_readback_offset = 0
@@ -62,6 +64,23 @@ class FakePlatform(PlatformBackend):
     def maximize_window(self, handle):
         self.calls.append(("maximize", handle))
         return True
+
+    def running_processes(self):
+        out = []
+        for i, n in enumerate(sorted(self.running)):
+            title = next((w.title for w in self.windows if w.process.lower() == n), "")
+            out.append({"name": n, "pid": 5000 + i, "exe": self.exe_paths.get(n, f"C:\\Apps\\{n}"), "title": title})
+        return out
+
+    def close_pids(self, pids, force=False, timeout=8.0):
+        names = [p["name"] for p in self.running_processes() if p["pid"] in pids]
+        if any(n in self.stubborn for n in names) and not force:
+            from fristy.computer_control.base import ActionError
+            raise ActionError(f"{names[0]} did not close by itself (1 process(es) still running).", "still_running")
+        for n in names:
+            self.calls.append(("close", n, force))
+            self.running.discard(n)
+        return len(names)
 
     def close_process_windows(self, process_name, force=False, timeout=8.0):
         self.calls.append(("close", process_name, force))

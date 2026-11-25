@@ -242,18 +242,36 @@ class WindowsBackend(PlatformBackend):
 
     def close_process_windows(self, process_name: str, force: bool = False, timeout: float = 8.0) -> int:
         target = process_name.lower()
-        pids = {p.pid for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == target}
-        if not pids:
-            return 0
-        for w in self.list_windows():
-            if w.pid in pids:
-                user32.PostMessageW(w.handle, WM_CLOSE, 0, 0)
+        pids = [p.pid for p in psutil.process_iter(["name"]) if (p.info["name"] or "").lower() == target]
+        return self.close_pids(pids, force, timeout) if pids else 0
+
+    @staticmethod
+    def _top_level_windows_of(pids: set[int]) -> list[int]:
+        """All top-level windows of the processes, including hidden ones (tray apps)."""
+        found: list[int] = []
+
+        def cb(hwnd, _lparam):
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value in pids:
+                found.append(int(hwnd))
+            return True
+
+        user32.EnumWindows(EnumWindowsProc(cb), 0)
+        return found
+
+    def close_pids(self, pids: list[int], force: bool = False, timeout: float = 8.0) -> int:
+        """Graceful close (WM_CLOSE to every window, visible or in the tray); terminate only if force."""
         procs = []
-        for pid in pids:
+        for pid in set(pids):
             try:
                 procs.append(psutil.Process(pid))
             except psutil.NoSuchProcess:
                 pass
+        if not procs:
+            return 0
+        for hwnd in self._top_level_windows_of({p.pid for p in procs}):
+            user32.PostMessageW(hwnd, WM_CLOSE, 0, 0)
         gone, alive = psutil.wait_procs(procs, timeout=timeout)
         if alive and force:
             for p in alive:
@@ -265,8 +283,8 @@ class WindowsBackend(PlatformBackend):
             gone += gone2
         if alive:
             raise ActionError(
-                f"{process_name} did not close (it may be asking to save work). {len(alive)} process(es) still running."
-            )
+                f"{alive[0].name()} did not close by itself ({len(alive)} process(es) still running - it may be asking "
+                "to save work or running in the background). Ask again with force to end it.", "still_running")
         return len(gone)
 
     # ----------------------------------------------------------------- audio

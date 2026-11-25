@@ -60,6 +60,10 @@ def quick_reply_he(name: str, args: dict[str, Any], ok: bool, message: str, data
             return f"לא ביצעתי: ההרשאה המתאימה כבויה בהגדרות. ({message})"
         if "did not approve" in message.lower():
             return "הפעולה לא בוצעה כי לא אישרת אותה."
+        if "matches several running apps" in message:
+            return "יש כמה אפליקציות פתוחות שמתאימות לשם הזה: " + message.split(":", 1)[1].replace("Which one?", "").strip() + " - לאיזו התכוונת?"
+        if "did not close by itself" in message:
+            return f"האפליקציה לא נסגרה מעצמה (אולי היא רצה ברקע או מבקשת לשמור). אמור ״סגור בכוח {args.get('process')}״ כדי לסגור אותה בכל זאת."
         return f"לא הצלחתי: {message}"
     if name == "set_volume":
         return f"עוצמת הקול הוגדרה ל-{data.get('level', args.get('level'))}%."
@@ -81,7 +85,9 @@ def quick_reply_he(name: str, args: dict[str, Any], ok: bool, message: str, data
     if name == "change_volume":
         return f"עוצמת הקול עכשיו {data.get('level', '?')}%."
     if name == "close_app":
-        return f"סגרתי את {args.get('process')}." if "Closed" in message else f"{args.get('process')} לא פתוח."
+        if "Closed" in message:
+            return f"סגרתי את {data.get('app') or data.get('process') or args.get('process')}."
+        return f"{args.get('process')} לא פתוח כרגע."
     if name == "switch_window":
         return f"עברתי לחלון {args.get('query')}."
     if name == "minimize_window":

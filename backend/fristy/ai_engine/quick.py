@@ -39,6 +39,8 @@ _P_EXTRA = [
     (re.compile(r"^(?:תגביר|הגבר|תעלה|העלה)\s*(?:את\s+)?(?:ה)?(?:ווליום|קול|עוצמה|סאונד)?(?:\s+ב-?\s*(\d{1,3})\s*%?)?$"), "vol_up"),
     (re.compile(r"^(?:please\s+)?(?:turn\s+(?:the\s+)?volume\s+down|volume\s+down|quieter|make\s+it\s+quieter)(?:\s+by\s+(\d{1,3}))?(?:\s*%)?$", re.I), "vol_down"),
     (re.compile(r"^(?:תנמיך|הנמך|תחליש|החלש|תוריד|הורד)\s*(?:את\s+)?(?:ה)?(?:ווליום|קול|עוצמה|סאונד)?(?:\s+ב-?\s*(\d{1,3})\s*%?)?$"), "vol_down"),
+    (re.compile(r"^(?:please\s+)?force\s+(?:close|quit|kill)\s+([\w .+'\-]{2,40})$", re.I), "force_close"),
+    (re.compile(r"^(?:סגור|תסגור)\s+בכוח\s+(?:את\s+)?(?:ה)?([\u0590-\u05FF\w .+'\-]{2,40})$"), "force_close"),
     (re.compile(r"^(?:please\s+)?close\s+([\w .+'\-]{2,40})$", re.I), "close"),
     (re.compile(r"^(?:סגור|תסגור)\s+(?:את\s+)?(?:ה)?([֐-׿\w .+'\-]{2,40})$"), "close"),
     (re.compile(r"^(?:please\s+)?(?:switch|go)\s+to\s+([\w .+'\-]{2,40})$", re.I), "switch"),
@@ -91,13 +93,16 @@ def match_quick(text: str) -> Optional[tuple[str, dict]]:
         if intent in ("vol_up", "vol_down"):
             step = int(arg) if arg.isdigit() and 0 < int(arg) <= 100 else 10
             return "change_volume", {"delta": step if intent == "vol_up" else -step}
-        if intent in ("close", "switch", "minimize", "maximize"):
+        if intent in ("close", "force_close", "switch", "minimize", "maximize"):
             if _COMPOUND.search(" " + arg + " "):
                 return None
             target = _clean_target(arg)
-            if intent == "close":
-                proc = PROCESS_NAMES.get(target, target.replace(" ", "") + ".exe")
-                return "close_app", {"process": proc}
+            if intent in ("close", "force_close"):
+                # The action resolves the real running process (e.g. "epic games" -> EpicGamesLauncher.exe).
+                args = {"process": PROCESS_NAMES.get(target, target)}
+                if intent == "force_close":
+                    args["force"] = True
+                return "close_app", args
             name = {"switch": "switch_window", "minimize": "minimize_window", "maximize": "maximize_window"}[intent]
             return name, {"query": target}
         if intent == "google":
