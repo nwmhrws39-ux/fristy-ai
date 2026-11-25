@@ -89,7 +89,8 @@ function startBackend(): void {
   });
   backend.stdout?.on("data", (d) => process.stdout.write(`[backend] ${d}`));
   backend.stderr?.on("data", (d) => {
-    lastBackendError = String(d).slice(-2000);
+    const text = String(d);
+    if (/(ERROR|CRITICAL|Traceback|Error:|No module named)/.test(text)) lastBackendError = text.slice(-2000);
     process.stderr.write(`[backend] ${d}`);
   });
   backend.on("error", (err) => {
