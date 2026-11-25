@@ -24,6 +24,15 @@ FRISTY AI is a JARVIS-style personal assistant for Windows 10/11. It chats, list
 
 Uninstall from *Settings → Apps* or the Start Menu. Personal data (in `%APPDATA%\FRISTY AI`) is kept unless you tick “Personal data” in the uninstaller.
 
+### Updates
+Click **Update** in the title bar (FRISTY also checks at startup). It downloads the newest installer from this repository's GitHub Releases, verifies its SHA-256 checksum, installs silently and restarts. Releases are built automatically by GitHub Actions whenever the version in `desktop/package.json` changes on `main`.
+
+### Full computer access
+*Settings → Permissions → Full computer access* enables every permission, approves your user folder for file actions, allows closing any app and switches approvals to **relaxed**: FRISTY acts without asking, except before deleting files, shutdown/restart, terminal commands, closing apps, and any action that follows content read from files/websites/the screen.
+
+### Hebrew
+Write or speak Hebrew and FRISTY answers in Hebrew (instant commands, agent plans and reports too). For the best Hebrew use a cloud model (Claude / GPT-4o / Gemini) or locally *Gemma 3 12B* / *Aya Expanse 8B* (rated ★★★ in the model list); for Hebrew speech recognition pick Whisper **large-v3-turbo** in Settings → Voice. Hebrew system voices need the Windows Hebrew speech pack (Settings → Time & language → Speech).
+
 ### Default shortcuts
 | Action | Shortcut |
 |---|---|

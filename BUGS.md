@@ -11,6 +11,9 @@
 8. **Get-StartApps** takes 1–3 s on first app lookup (cached for 10 minutes).
 9. `SetForegroundWindow` can be refused by Windows focus-stealing rules; FRISTY reports “Windows did not allow switching” honestly instead of claiming success.
 
+10. **In-app updater** (download → SHA-256 verify → silent install → restart) is implemented but the Windows install step has not been exercised end-to-end yet; the GitHub check was verified against the real API.
+11. Tag pushes are blocked from the build session; releases are created by CI when `desktop/package.json` version changes.
+
 ## Fixed during development
 - `javascript:` URLs were coerced into `https://javascript:…` and accepted → strict scheme detection (test added).
 - Quick local intents swallowed sentences like “start X right now for me” → only confident app matches use the fast path.
