@@ -81,6 +81,20 @@ jobs:
             desktop/release/FRISTY-AI-Setup-*.exe.sha256
           retention-days: 30
 
+      - name: Release notes from CHANGELOG.md
+        if: steps.ver.outputs.release == 'true'
+        run: |
+          node -e "
+            const fs = require('fs');
+            const v = process.argv[1];
+            const md = fs.readFileSync('CHANGELOG.md', 'utf8');
+            const start = md.indexOf('## ' + v);
+            let body = 'FRISTY AI ' + v;
+            if (start >= 0) { const rest = md.slice(start); const next = rest.indexOf('\n## ', 3); body = rest.slice(rest.indexOf('\n') + 1, next > 0 ? next : undefined).trim(); }
+            fs.writeFileSync('release-notes.md', body + '\n');
+          " "${{ steps.ver.outputs.version }}"
+          cat release-notes.md
+
       - name: Publish GitHub Release
         if: steps.ver.outputs.release == 'true'
         uses: softprops/action-gh-release@v2
@@ -93,4 +107,4 @@ jobs:
           files: |
             desktop/release/FRISTY-AI-Setup-*.exe
             desktop/release/FRISTY-AI-Setup-*.exe.sha256
-          generate_release_notes: true
+          body_path: release-notes.md
