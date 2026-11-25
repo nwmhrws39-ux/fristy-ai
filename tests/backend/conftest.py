@@ -3,7 +3,11 @@ tested in a safe environment without touching the real machine."""
 from __future__ import annotations
 
 import asyncio
+import os
 import pathlib
+
+# Never download speech models during tests (their downloader threads keep the process alive).
+os.environ["FRISTY_DISABLE_PRELOAD"] = "1"
 
 import pytest
 

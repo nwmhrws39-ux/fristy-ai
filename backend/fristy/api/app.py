@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import os
 import hmac
 import json
 import logging
@@ -71,7 +72,8 @@ def create_app(config: RuntimeConfig | None = None, services: Services | None = 
         svc.bus.bind_loop(asyncio.get_running_loop())
         svc.metrics.start()
         svc.automations.start_scheduler()
-        svc.voice.preload()
+        if not os.environ.get("FRISTY_DISABLE_PRELOAD"):
+            svc.voice.preload()
         try:
             await svc.remote.apply_settings()
         except Exception as exc:
