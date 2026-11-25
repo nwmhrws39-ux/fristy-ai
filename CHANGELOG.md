@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 — 2026-11-25
+- Much smaller installer (maximum compression).
+- Fix: model download reported “done” before the new model was selected.
+
 ## 0.2.0 — 2026-11-25
 - **Update button**: checks GitHub Releases, downloads the installer, verifies SHA-256, installs silently and restarts FRISTY. Automatic check at startup.
 - **Full computer access** mode (all permissions + user folder + close any app) with a relaxed approval level; destructive actions (delete, shutdown/restart, terminal, closing apps) still ask.

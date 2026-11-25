@@ -1,7 +1,7 @@
 {
   "name": "fristy-ai",
   "productName": "FRISTY AI",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "FRISTY AI - intelligent desktop assistant for Windows",
   "author": "FRISTY",
   "license": "UNLICENSED",
@@ -72,7 +72,7 @@
       }
     ],
     "asar": true,
-    "compression": "normal",
+    "compression": "maximum",
     "win": {
       "target": [
         {
@@ -97,7 +97,8 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "deleteAppDataOnUninstall": false,
-      "artifactName": "FRISTY-AI-Setup-${version}-x64.${ext}"
+      "artifactName": "FRISTY-AI-Setup-${version}-x64.${ext}",
+      "differentialPackage": false
     }
   }
 }
