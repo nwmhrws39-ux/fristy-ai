@@ -366,6 +366,11 @@ ipcMain.handle("shell:openExternal", (_e, url: string) => {
   return false;
 });
 ipcMain.handle("emergency-stop", () => emergencyStop());
+ipcMain.handle("window:show", () => {
+  // Used when an approval is requested: the user must be able to see it.
+  if (win && !win.isVisible()) showWindow();
+  else if (win && !win.isFocused()) win.flashFrame(true);
+});
 ipcMain.handle("dialog:pickFolder", async () => {
   if (!win) return null;
   const r = await dialog.showOpenDialog(win, { properties: ["openDirectory", "createDirectory"] });

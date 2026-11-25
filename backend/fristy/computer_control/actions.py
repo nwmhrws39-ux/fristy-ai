@@ -252,7 +252,7 @@ def build_registry(svc) -> None:
         await _t(plat.open_uri, args.url)
         return ok(f"Opened {args.url} in the default browser.")
 
-    add("open_website", "Open a website in the default browser.", UrlParams, "app_launch", Risk.LOW, open_url,
+    add("open_website", "Open a website in the default browser.", UrlParams, "network_access", Risk.LOW, open_url,
         category="apps", describe=lambda a: f"Open website {a.url}")
 
     # ------------------------------------------------------- windows

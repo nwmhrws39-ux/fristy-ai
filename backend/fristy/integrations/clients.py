@@ -55,6 +55,8 @@ class IntegrationClient:
                       timeout: float = 10.0) -> Any:
         if not self.enabled:
             raise ActionError(f"{APPS[self.key]} integration is disabled.", "integration_disabled")
+        if not self.settings.current.permissions.get("network_access"):
+            raise ActionError("Network access permission is disabled.", "permission_denied")
         try:
             async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
                 r = await client.request(method, self._base() + path, json=json, params=params,
@@ -170,7 +172,7 @@ def build_integration_actions(svc) -> None:
                             data=res, verified=ok)
 
     def add(name, desc, params, risk, handler, **kw):
-        reg.register(ActionSpec(name=name, description=desc, params=params, permission=kw.pop("perm", None),
+        reg.register(ActionSpec(name=name, description=desc, params=params, permission=kw.pop("perm", "network_access"),
                                 risk=risk, handler=handler, category="integrations", **kw))
 
     add("fristy_launcher_games", "Search the FRISTY Launcher game library.", GameQuery, Risk.LOW, search_games)
@@ -178,7 +180,7 @@ def build_integration_actions(svc) -> None:
         perm="app_launch", describe=lambda a: f"Launch {a.game} via FRISTY Launcher")
     add("fristy_launcher_playtime", "Show game playtime from FRISTY Launcher.", GameQuery, Risk.LOW, playtime)
     add("pc_performance", "Read CPU/GPU usage, temperatures and RAM (FRISTY PC Manager or built-in monitor).",
-        EmptyParams, Risk.LOW, performance)
+        EmptyParams, Risk.LOW, performance, perm="system_control")
     add("fristy_cleaner_scan", "Scan storage, duplicates or large files with FRISTY Cleaner.", ScanParams, Risk.LOW,
         cleaner_scan)
     add("fristy_cleaner_clean", "Clean items found by a FRISTY Cleaner scan (always asks for approval).",

@@ -14,6 +14,6 @@
 | Renderer compromise | contextIsolation, sandbox, no nodeIntegration, strict CSP (no remote scripts/connections except the local backend), navigation and window.open blocked, only microphone permission granted, external links via validated `shell.openExternal`. |
 | Runaway agents | Max steps (≤25), max duration, max failures, plan approval, pause/stop, global emergency stop, all runs cancellable. |
 
-All permissions except application launching and system control (volume/windows/media) are **off by default**.
+All permissions except application launching, system control (volume/windows/media) and network access (opening websites, local FRISTY app integrations) are **off by default**.
 
 Known gaps are tracked in `BUGS.md` (e.g. Remote LAN mode has no TLS; installer unsigned).

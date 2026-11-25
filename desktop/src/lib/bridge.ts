@@ -19,6 +19,7 @@ export interface FristyBridge {
   openExternal(url: string): Promise<void>;
   emergencyStop(): Promise<void>;
   pickFolder(): Promise<string | null>;
+  show(): Promise<void>;
   on(channel: string, fn: (...args: any[]) => void): () => void;
 }
 
@@ -39,6 +40,7 @@ const devBridge: FristyBridge = {
   async restartBackend() { return false; },
   async openExternal(url) { window.open(url, "_blank", "noopener"); },
   async emergencyStop() {},
+  async show() { window.focus(); },
   async pickFolder() { return window.prompt("Absolute folder path"); },
   on() { return () => {}; },
 };

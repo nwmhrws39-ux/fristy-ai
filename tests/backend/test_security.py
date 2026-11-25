@@ -114,5 +114,14 @@ def test_secrets_never_in_settings(svc):
 def test_default_permissions_are_restrictive(svc):
     p = svc.settings.current.permissions
     for name in ("screen_view", "mouse_control", "keyboard_control", "file_access", "terminal_exec",
-                 "power_management", "network_access"):
+                 "power_management"):
         assert p[name] is False
+    assert p["network_access"] is True  # websites / integrations; can be turned off
+
+
+async def test_network_permission_gates_websites_and_integrations(svc):
+    svc.settings.update({"permissions": {**svc.settings.current.permissions, "network_access": False}})
+    res = await svc.engine.execute("open_website", {"url": "example.com"})
+    assert res.code == "permission_denied" and not svc.platform.calls
+    res = await svc.engine.execute("fristy_launcher_games", {"query": ""})
+    assert res.code == "permission_denied"

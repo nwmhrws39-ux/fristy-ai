@@ -134,11 +134,11 @@ class Settings(BaseModel):
     memory: MemorySettings = Field(default_factory=MemorySettings)
     integrations: IntegrationSettings = Field(default_factory=IntegrationSettings)
     remote: RemoteSettings = Field(default_factory=RemoteSettings)
-    # Every permission is OFF by default except non-destructive application launching
-    # and system information/volume. The user enables the rest explicitly.
+    # Every permission is OFF by default except non-destructive application launching,
+    # system information/volume and opening websites. The user enables the rest explicitly.
     permissions: dict[str, bool] = Field(
         default_factory=lambda: {
-            p: p in ("app_launch", "system_control") for p in PERMISSION_NAMES
+            p: p in ("app_launch", "system_control", "network_access") for p in PERMISSION_NAMES
         }
     )
     approved_dirs: list[str] = Field(default_factory=list)
@@ -148,7 +148,7 @@ class Settings(BaseModel):
     @field_validator("permissions")
     @classmethod
     def _perms(cls, v: dict[str, bool]) -> dict[str, bool]:
-        out = {p: bool(v.get(p, False)) for p in PERMISSION_NAMES}
+        out = {p: bool(v.get(p, p in ("app_launch", "system_control", "network_access"))) for p in PERMISSION_NAMES}
         return out
 
     @field_validator("approved_dirs")

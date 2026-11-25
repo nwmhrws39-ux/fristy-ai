@@ -3,8 +3,8 @@
 ## Automated results (2026-11-25, Linux build environment)
 | Suite | Command | Result |
 |---|---|---|
-| Backend unit + integration (Python 3.13) | `.venv/bin/python -m pytest -q` | **182 passed** |
-| Backend on Python 3.12 (bundled version) | same, with a 3.12 venv | **182 passed** |
+| Backend unit + integration (Python 3.13) | `.venv/bin/python -m pytest -q` | **183 passed** |
+| Backend on Python 3.12 (bundled version) | same, with a 3.12 venv | **183 passed** |
 | Frontend unit (vitest/jsdom) | `cd desktop && npm test` | **9 passed** |
 | TypeScript (renderer + Electron) | `npm run typecheck` | clean |
 | Static lint (ruff F/E9) | `ruff check backend tools --select F,E9` | clean |

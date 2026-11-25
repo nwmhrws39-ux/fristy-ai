@@ -181,7 +181,7 @@ function handleEvent(ev: BackendEvent) {
       setState((st) => ({ confirmations: [...st.confirmations.filter((c) => c.id !== ev.id),
         { id: ev.id, action: ev.action, summary: ev.summary, risk: ev.risk, source: ev.source, details: ev.details,
           timeout: ev.timeout, receivedAt: Date.now() }] }));
-      bridge.getConfig().then(() => window.focus());
+      void bridge.show();
       break;
     case "confirmation.closed":
       setState((st) => ({ confirmations: st.confirmations.filter((c) => c.id !== ev.id) }));

@@ -45,7 +45,7 @@ Legend: [x] done and tested here · [~] implemented, needs validation on real Wi
 
 ## Phase 6 – Security, tests, installer
 - [x] Security review items in docs/SECURITY.md implemented and tested
-- [x] 182 backend tests (Python 3.12 and 3.13), 9 frontend tests, browser + Electron E2E (dev and packaged)
+- [x] 183 backend tests (Python 3.12 and 3.13), 9 frontend tests, browser + Electron E2E (dev and packaged)
 - [x] Windows installer (NSIS, per-user, bundled CPython 3.12 + win_amd64 wheels)
 - [ ] Code signing (needs a certificate)
 - [ ] Validation pass on real Windows 10 and 11 machines

@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("fristy", {
   restartBackend: () => ipcRenderer.invoke("backend:restart"),
   openExternal: (url: string) => ipcRenderer.invoke("shell:openExternal", url),
   emergencyStop: () => ipcRenderer.invoke("emergency-stop"),
+  show: () => ipcRenderer.invoke("window:show"),
   pickFolder: () => ipcRenderer.invoke("dialog:pickFolder"),
   on: (channel: (typeof CHANNELS)[number], fn: Listener) => {
     if (!CHANNELS.includes(channel)) throw new Error("invalid channel");
